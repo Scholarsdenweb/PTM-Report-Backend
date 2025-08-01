@@ -233,10 +233,10 @@ const createReportFromExcelFile = async (filePath) => {
       { key: "Maths", label: "Maths" }, // Added variation if needed
       { key: "Biology", label: "Biology" },
       { key: "Chemistry", label: "Chemistry" },
-      { key: "Geography", label: "Geography" },
+      { key: "Geography+Economics", label: "Geography + Economics" },
       { key: "Economics", label: "Economics" },
       { key: "English", label: "English" },
-      { key: "History + Civics", label: "History + Civics" },
+      { key: "History+Civics", label: "History + Civics" },
       { key: "Total", label: "Total" },
     ];
 
@@ -275,8 +275,9 @@ const createReportFromExcelFile = async (filePath) => {
       motherName: row["M_N"] || "",
       fatherName: row["F_N"] || "",
       batchStrength: 50,
+      // photo : `../photographs/${row["Name"]}_${row["Roll No."]}`,
       photo: "./student.png",
-      headerImage: "./headerImage.png",
+      headerImage: "../assets/headerImage.png",
       subjectWiseData,
       jeeMain,
       jeeAdv,
@@ -298,12 +299,13 @@ const createReportFromExcelFile = async (filePath) => {
     const reportPath = path.join(outputDir, fileName);
 
     try {
+
       await generatePerformanceReportPDF(studentData, reportPath);
       reportResults.push({ studentData, reportPath });
 
       console.log(`✅ PDF generated: ${fileName}`);
     } catch (err) {
-      console.error(`❌ Error for ${data.name}: ${err.message}`);
+      console.error(`❌ Error for ${studentData.name}: ${err.message}`);
     }
   }
   return reportResults;

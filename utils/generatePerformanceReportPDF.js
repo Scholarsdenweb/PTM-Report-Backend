@@ -341,6 +341,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
         text-align: center;
         font-size: 32px;
         font-weight: bold;
+        padding-top: 50px;
       }
 
       .section-title span {
@@ -412,8 +413,6 @@ table {
     display : flex;
     flex-direction : column;
     gap : 50px;
-    padding-top : 60px;
-    margin-top: 50px;
   }
 
       .graph-container {
@@ -430,7 +429,7 @@ table {
         padding: 0;
         display: block;
       }
-
+        
       .headingAndGraph {
         display: flex;
         flex-direction: column;
@@ -438,7 +437,6 @@ table {
         align-items: center;
         page-break-inside: avoid;
         break-inside: avoid;
-
         gap: 2px;
       }
 
