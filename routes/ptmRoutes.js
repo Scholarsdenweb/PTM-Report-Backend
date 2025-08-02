@@ -3,9 +3,13 @@ const router = express.Router();
 const PTMController = require('../controllers/PTMController');
 const upload = require('../middlewares/upload'); // ⬅️ This is your multer middleware
 const ptmController = new PTMController();
+const authMiddleware = require('../middlewares/authMiddleware');
+const isAdmin = require('../middlewares/isAdmin');
 
 
 router.post('/upload', upload.single("csvFile"), ptmController.handleUpload.bind(ptmController));
+
+router.get("/admin/reports", authMiddleware, isAdmin, ptmController.getAllReports.bind(ptmController));
 
 
 

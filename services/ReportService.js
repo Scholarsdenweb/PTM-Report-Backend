@@ -1,22 +1,15 @@
-
 // src/services/ReportService.js
-const fs = require('fs');
-const path = require('path');
-const puppeteer = require('puppeteer');
 const cloudinary = require('cloudinary').v2;
-require("dotenv").config();
-
-
-
-console.log("cloud_nam process.env.CLOUDINARY_CLOUD_NAME,process.env.CLOUDINARY_API_KEY,process.env.CLOUDINARY_API_SECRET,", process.env.CLOUDINARY_CLOUD_NAME,
-process.env.CLOUDINARY_API_KEY,
-process.env.CLOUDINARY_API_SECRET,)
+const puppeteer = require('puppeteer');
+require('dotenv').config();
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+const DELIVERY_MODE = process.env.REPORT_DELIVERY_MODE || 'secure'; // 'secure' or 'public'
 
 class ReportService {
   async generatePDF(htmlContent, pdfPath) {
@@ -27,33 +20,55 @@ class ReportService {
     await browser.close();
   }
 
-  // async uploadReport(filePath) {
-  //   const result = await cloudinary.uploader.upload(filePath, {
-  //     folder: 'PTM_Document/PTM_Report',
-  //     resource_type: 'raw',
-  //   });
-  //   return result.secure_url;
-  // }
+  async uploadReport(filePath, studentName, rollNumber) {
+    const sanitizedStudentName = studentName.replace(/[^a-z0-9_\-]/gi, '_');
+    const sanitizedRollNumber = rollNumber.toString().replace(/[^a-z0-9_\-]/gi, '_');
+    const uniqueFileName = `${sanitizedStudentName}_${sanitizedRollNumber}`;
+
+    const uploadOptions = {
+      folder: 'PTM_Document/PTM_Report',
+      public_id: uniqueFileName,
+      resource_type: 'raw',
+      overwrite: true,
+      type: DELIVERY_MODE === 'secure' ? 'authenticated' : 'upload', // 'authenticated' for secure, 'upload' for public
+    };
+
+    const result = await cloudinary.uploader.upload(filePath, uploadOptions);
+    console.log("result from cloudinary", result);
+
+    return {
+      public_id: result.public_id,
+      secure_url: result.secure_url, // useful for public delivery
+    };
+  }
+
+  async getReportAccessUrl(publicId, expiresInSeconds = 3600) {
+    if (DELIVERY_MODE === 'secure') {
+      const url = cloudinary.url(publicId, {
+        type: 'authenticated',
+        resource_type: 'raw',
+        sign_url: true,
+        expires_at: Math.floor(Date.now() / 1000) + expiresInSeconds,
+      });
+      return url;
+    } else {
+      // Public access (already secure_url available)
+      return cloudinary.url(publicId, {
+        resource_type: 'raw',
+      });
+    }
+  }
 
 
-async uploadReport(filePath, studentName, rollNumber) {
-  const sanitizedStudentName = studentName.replace(/[^a-z0-9_\-]/gi, '_');
-  const sanitizedRollNumber = rollNumber.toString().replace(/[^a-z0-9_\-]/gi, '_');
 
-  const uniqueFileName = `${sanitizedStudentName}_${sanitizedRollNumber}`;
 
-  const result = await cloudinary.uploader.upload(filePath, {
-    folder: 'PTM_Document/PTM_Report',
-    public_id: uniqueFileName,
-    resource_type: 'raw',
-    overwrite: true, 
-  });
 
-  return result.secure_url;
-}
+
+
+
+
 
 
 }
 
 module.exports = ReportService;
-

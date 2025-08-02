@@ -7,6 +7,7 @@ const cors = require("cors");
 const PTMRoute = require("./routes/ptmRoutes.js");
 const userRoutes = require("./routes/userRoutes");
 const authRoutes = require("./routes/authRoutes");
+const batchRoutes = require("./routes/batchRoutes");
 
 require("dotenv").config();
 app.use(cookieParser());
@@ -46,6 +47,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/ptm", PTMRoute);
 app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes); // Login route
+app.use("/api/batches", batchRoutes);
 
 mongoose
   .connect(process.env.MONGODB_URI, {

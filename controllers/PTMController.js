@@ -2,15 +2,14 @@
 
 // At the top of your file
 
-
-
-
 const path = require("path");
 const ExcelService = require("../services/ExcelService");
 const ReportService = require("../services/ReportService");
 const WhatsAppService = require("../services/WhatsAppService");
 const createReportFromExcelFile = require("../utils/createReportFromExcelFile");
 const { removeFileFormServer } = require("../utils/removeFileFormServer");
+const StudentModel = require("../models/Student");
+const ReportCardModel = require("../models/ReportCard");
 
 class PTMController {
   constructor() {
@@ -18,8 +17,6 @@ class PTMController {
     this.reportService = new ReportService();
     this.whatsAppService = new WhatsAppService();
   }
-
-
 
   async handleUpload(req, res) {
     try {
@@ -33,16 +30,35 @@ class PTMController {
       for (const data of reportDataArray) {
         const { studentData, reportPath } = data;
 
-        console.log("StudentData", studentData);
-
-        // const uploadedUrl = await this.reportService.uploadReport(reportPath);
         const uploadedUrl = await this.reportService.uploadReport(
           reportPath,
           studentData.name,
           studentData.rollNo
         );
 
-        console.log("uploadedURL from handleUpload", uploadedUrl);
+        // Upsert student
+        let student = await StudentModel.findOneAndUpdate(
+          { rollNo: studentData.rollNo },
+          {
+            name: studentData.name,
+            fatherName: studentData.fatherName,
+            motherName: studentData.motherName,
+            batch: studentData.batch,
+            fatherContactNumber:
+              studentData.fatherContactNumber || studentData.FATHER_CONTACT_NO,
+            motherContactNumber:
+              studentData.motherContactNumber || studentData.MOTHER_CONTACT_NO,
+          },
+          { upsert: true, new: true }
+        );
+
+        // Create report document
+        await ReportCardModel.create({
+          student: student._id,
+          public_id: uploadedUrl.public_id,
+          secure_url: uploadedUrl.secure_url,
+          reportDate: new Date(),
+        });
 
         results.push({
           name: studentData.name,
@@ -51,7 +67,6 @@ class PTMController {
         });
 
         await removeFileFormServer(reportPath);
-
         // const mobile = studentData.FATHER_CONTACT_NO || studentData.MOTHER_CONTACT_NO;
         // const name = studentData.NAME;
 
@@ -73,57 +88,73 @@ class PTMController {
         .json({ message: "An error occurred while processing reports." });
     }
   }
+
+  async getAllReports(req, res) {
+    try {
+      const reports = await ReportCardModel.find().populate("student");
+
+      const results = await Promise.all(
+        reports.map(async (report) => {
+          const accessUrl = await this.reportService.getReportAccessUrl(
+            report.reportCardUrl
+          );
+          return {
+            name: report.student.name,
+            rollNo: report.student.rollNo,
+            batch: report.student.batch,
+            uploadedAt: report.reportDate,
+            downloadUrl: accessUrl,
+          };
+        })
+      );
+
+      res.json({
+        count: results.length,
+        reports: results,
+      });
+    } catch (err) {
+      console.error("Error fetching all reports:", err);
+      res
+        .status(500)
+        .json({ message: "An error occurred while fetching reports." });
+    }
+  }
+
+  async getAllReports(req, res) {
+    try {
+      const isSecure = req.query.secure === "true"; // switch via query param
+      const reports = await ReportCardModel.find()
+        .populate("student")
+        .sort({ reportDate: -1 }); // latest first
+
+      const formattedReports = reports.map((report) => {
+        const publicId = report.reportCardUrl
+          .split("/")
+          .slice(-2)
+          .join("/")
+          .replace(".pdf", ""); // Extract public_id from URL
+
+        const finalUrl = isSecure
+          ? this.reportService.generateSignedUrl(publicId)
+          : report.reportCardUrl;
+        return {
+          name: report.student.name,
+          rollNo: report.student.rollNo,
+          batch: report.student.batch,
+          reportDate: report.reportDate,
+          downloadUrl: finalUrl,
+        };
+      });
+
+      res.status(200).json({
+        message: "All reports fetched successfully",
+        reports: formattedReports,
+      });
+    } catch (err) {
+      console.error("Error fetching reports:", err);
+      res.status(500).json({ message: "Failed to fetch reports" });
+    }
+  }
 }
 
 module.exports = PTMController;
-
-// const createReportFromExcelFile = require("../utils/createReportFromExcelFile");
-// const WhatsAppService = require("../services/WhatsAppService");
-
-// module.exports = {
-//   uploadPTMReport: async (req, res) => {
-//     try {
-//       console.log("req.file", req.file);
-//       if (!req.file) {
-//         return res.status(400).json({ error: "No file uploaded." });
-//       }
-
-//       const filePath = req.file.path;
-//       const reportResults = await createReportFromExcelFile(filePath);
-
-//       for (const data of reportResults) {
-//         const { studentData, reportPath } = data;
-
-//         const uploadedUrl = await ReportService.uploadReport(reportPath);
-
-//         console.log("uploadedUrl", uploadedUrl);
-//         // const mobile =
-//         //   studentData.FATHER_CONTACT_NO || studentData.MOTHER_CONTACT_NO;
-//         // const name = studentData.NAME;
-
-//         // if (mobile) {
-//         //   await this.whatsAppService.sendReport(mobile, name, uploadedUrl);
-//         // }
-//       }
-
-//       // Optional: send reports over WhatsApp
-//       // for (const report of reportResults) {
-//       //   const phone = report.studentData.fatherContact || report.studentData.phone || '';
-//       //   if (phone) {
-//       //     await WhatsAppService.sendReport(phone, report.reportPath, report.studentData.name);
-//       //   }
-//       // }
-
-//       res.status(200).json({
-//         message: "Reports generated successfully",
-//         results: reportResults.map((r) => ({
-//           name: r.studentData.name,
-//           file: r.reportPath,
-//         })),
-//       });
-//     } catch (error) {
-//       console.error("Upload error:", error);
-//       res.status(500).json({ error: "Failed to process Excel file" });
-//     }
-//   },
-// };

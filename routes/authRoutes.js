@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 const User = require('../models/User');
+const authMiddleware = require('../middlewares/authMiddleware');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 
@@ -35,5 +36,16 @@ console.log("email, password", req.body);
     })
     .json({ user: { id: user._id, email: user.email, username: user.username } });
 });
+
+
+router.get('/me',authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    res.json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+})
 
 module.exports = router;
