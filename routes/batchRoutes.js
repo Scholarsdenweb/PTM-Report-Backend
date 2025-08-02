@@ -1,20 +1,19 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const User = require('../models/User');
+const User = require("../models/User");
 
-
-
-const PTMController = require('../controllers/PTMController');
+const PTMController = require("../controllers/PTMController");
 
 const StudentModel = require("../models/Student");
 const ReportCardModel = require("../models/ReportCard");
 
-
-
-
+const archiver = require("archiver");
+const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
 
 // GET /batches
-router.get('/', async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const batches = await StudentModel.distinct("batch");
     res.json({ batches });
@@ -24,12 +23,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-
-
-
-
 // GET /batches/:batch/dates
-router.get('/:batch/dates', async (req, res) => {
+router.get("/:batch/dates", async (req, res) => {
   const { batch } = req.params;
 
   try {
@@ -40,135 +35,163 @@ router.get('/:batch/dates', async (req, res) => {
           localField: "student",
           foreignField: "_id",
           as: "student",
-        }
+        },
       },
       { $unwind: "$student" },
       { $match: { "student.batch": batch } },
       {
         $group: {
           _id: {
-            $dateToString: { format: "%Y-%m-%d", date: "$reportDate" }
-          }
-        }
+            $dateToString: { format: "%Y-%m-%d", date: "$reportDate" },
+          },
+        },
       },
-      { $sort: { "_id": -1 } }
+      { $sort: { _id: -1 } },
     ]);
 
-    const distinctDates = dates.map(d => d._id);
+    const distinctDates = dates.map((d) => d._id);
     res.json({ dates: distinctDates });
-
   } catch (err) {
     console.error("Error fetching dates:", err);
     res.status(500).json({ message: "Failed to fetch report dates" });
   }
 });
 
+// GET /api/batches/reports?batch=NX4&date=2025-08-01&search=John&page=1&limit=10
+// router.get("/reports", async (req, res) => {
+//   try {
+//     const { batch, date, name ="", rollNo ="", page = 1, limit = 10 } = req.query;
 
+//     if (!batch || !date) {
+//       return res.status(400).json({ error: "Batch and date are required." });
+//     }
 
-// GET /batches/:batch/reports
-// router.get('/:batch/reports', async (req, res) => {
-//   const { batch } = req.params;
-//   const { date, name, rollNo, page = 1, limit = 10 } = req.query;
+//     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-//   const studentQuery = { batch };
+//     // First, find students in that batch whose name or roll matches search
+//     const studentFilter = {
+//       batch,
+//       $or: [
+//         { name: { $regex: name, $options: "i" } },
+//         { rollNumber: { $regex: rollNo, $options: "i" } },
+//       ],
+//     };
+//     const matchedStudents = await StudentModel.find(studentFilter).select(
+//       "_id"
+//     );
 
-//   if (name) studentQuery.name = { $regex: name, $options: 'i' };
-//   if (rollNo) studentQuery.rollNo = { $regex: rollNo, $options: 'i' };
+//     console.log("matchedStudents", matchedStudents);
 
-//   const students = await StudentModel.find(studentQuery).select('_id');
+//     if (matchedStudents.length === 0) {
+//       return res.status(404).json({ error: "No matching students found." });
+//     }
 
-//   const reportQuery = {
-//     student: { $in: students.map(s => s._id) }
-//   };
+//     const startOfDay = new Date(date);
+//     const endOfDay = new Date(date);
+//     endOfDay.setUTCHours(23, 59, 59, 999);
 
-//   if (date) {
-//     const start = new Date(date);
-//     const end = new Date(date);
-//     end.setHours(23, 59, 59, 999);
-//     reportQuery.reportDate = { $gte: start, $lte: end };
+//     const reportFilter = {
+//       student: { $in: matchedStudents.map((s) => s._id) },
+//       reportDate: { $gte: startOfDay, $lte: endOfDay },
+//     };
+
+//     // Now fetch reports for those students on that date
+//     // const reportFilter = {
+//     //   student: { $in: matchedStudents.map(s => s._id) },
+//     //   reportDate: date,
+//     // };
+
+//     const totalReports = await ReportCardModel.countDocuments(reportFilter);
+
+//     console.log("totalReports", totalReports);
+//     const reports = await ReportCardModel.find(reportFilter)
+//       .populate("student")
+//       .sort({ "student.name": 1 }) // Optional: alphabetically
+//       .skip(skip)
+//       .limit(parseInt(limit));
+
+//     res.json({
+//       reports,
+//       totalPages: Math.ceil(totalReports / limit),
+//       currentPage: parseInt(page),
+//       totalReports,
+//     });
+//   } catch (err) {
+//     console.error("Error in /batches/reports:", err);
+//     res.status(500).json({ error: "Server error" });
 //   }
-
-//   const total = await ReportCardModel.countDocuments(reportQuery);
-
-//   const reports = await ReportCardModel.find(reportQuery)
-//     .populate("student")
-//     .sort({ reportDate: -1 })
-//     .skip((page - 1) * limit)
-//     .limit(Number(limit));
-
-//   res.json({
-//     total,
-//     page: Number(page),
-//     totalPages: Math.ceil(total / limit),
-//     reports
-//   });
 // });
 
-
-
-
-// GET /api/batches/reports?batch=NX4&date=2025-08-01&search=John&page=1&limit=10
-router.get('/reports', async (req, res) => {
+router.get("/reports", async (req, res) => {
   try {
-    const { batch, date, search = '', page = 1, limit = 10 } = req.query;
+    const {
+      batch,
+      date,
+      name = "",
+      rollNo = "",
+      page = 1,
+      limit = 10,
+    } = req.query;
 
     if (!batch || !date) {
       return res.status(400).json({ error: "Batch and date are required." });
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const pageNumber = parseInt(page);
+    const limitNumber = parseInt(limit);
+    const skip = (pageNumber - 1) * limitNumber;
 
-    // First, find students in that batch whose name or roll matches search
+    // Build student filter
     const studentFilter = {
       batch,
-      $or: [
-        { name: { $regex: search, $options: 'i' } },
-        { rollNumber: { $regex: search, $options: 'i' } }
-      ]
+      ...(name || rollNo
+        ? {
+            $and: [
+              name ? { name: { $regex: name, $options: "i" } } : {},
+              rollNo
+                ? { rollNo: { $regex: rollNo, $options: "i" } }
+                : {},
+            ],
+          }
+        : {}),
     };
-    const matchedStudents = await StudentModel.find(studentFilter).select('_id');
 
-
-    console.log("matchedStudents", matchedStudents);
-
+    const matchedStudents = await StudentModel.find(studentFilter).select(
+      "_id"
+    );
 
     if (matchedStudents.length === 0) {
-      return res.status(404).json({ error: "No matching students found." });
+      return res.json({
+        reports: [],
+        totalPages: 1,
+        currentPage: 1,
+        totalReports: 0,
+      });
     }
 
-
-
     const startOfDay = new Date(date);
-const endOfDay = new Date(date);
-endOfDay.setUTCHours(23, 59, 59, 999);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setUTCHours(23, 59, 59, 999);
 
-const reportFilter = {
-  student: { $in: matchedStudents.map(s => s._id) },
-  reportDate: { $gte: startOfDay, $lte: endOfDay }
-};
-
-
-
-    // Now fetch reports for those students on that date
-    // const reportFilter = {
-    //   student: { $in: matchedStudents.map(s => s._id) },
-    //   reportDate: date,
-    // };
+    const reportFilter = {
+      student: { $in: matchedStudents.map((s) => s._id) },
+      reportDate: { $gte: startOfDay, $lte: endOfDay },
+    };
 
     const totalReports = await ReportCardModel.countDocuments(reportFilter);
 
-
-    console.log("totalReports", totalReports);
     const reports = await ReportCardModel.find(reportFilter)
-      .populate('student')
-      .sort({ 'student.name': 1 }) // Optional: alphabetically
+      .populate("student")
+      .sort({ "student.name": 1 })
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(limitNumber);
 
-    res.json({
+
+   return res.json({
       reports,
-      totalPages: Math.ceil(totalReports / limit),
-      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalReports / limitNumber) || 1,
+      currentPage: pageNumber,
       totalReports,
     });
   } catch (err) {
@@ -177,7 +200,288 @@ const reportFilter = {
   }
 });
 
-module.exports = router;
+
+// router.get("/reports/download", async (req, res) => {
+//   try {
+//     const { batch, date, name = "", rollNo = "" } = req.query;
+//     if (!batch || !date) {
+//       return res.status(400).json({ error: "Batch and date are required." });
+//     }
+
+//     // Build student filter based on query
+//     const studentFilter = {
+//       batch,
+//       ...(name || rollNo
+//         ? {
+//             $and: [
+//               name
+//                 ? { name: { $regex: name, $options: "i" } }
+//                 : {},
+//               rollNo
+//                 ? { rollNo: { $regex: rollNo, $options: "i" } }
+//                 : {},
+//             ],
+//           }
+//         : {}),
+//     };
+
+//     const students = await StudentModel.find(studentFilter).select("_id name rollNo");
+
+//     if (!students.length) {
+//       return res.status(404).json({ error: "No matching students." });
+//     }
+
+//     const start = new Date(date);
+//     start.setUTCHours(0, 0, 0, 0);
+//     const end = new Date(date);
+//     end.setUTCHours(23, 59, 59, 999);
+
+//     const reports = await ReportCardModel.find({
+//       student: { $in: students.map((s) => s._id) },
+//       reportDate: { $gte: start, $lte: end },
+//     }).populate("student");
+
+//     if (!reports.length) {
+//       return res.status(404).json({ error: "No reports found." });
+//     }
+
+//     // Set headers for ZIP streaming
+//     res.setHeader("Content-Type", "application/zip");
+//     res.setHeader(
+//       "Content-Disposition",
+//       `attachment; filename=PTM_Reports_${batch}_${date}.zip`
+//     );
+
+//     const archive = archiver("zip", { zlib: { level: 9 } });
+//     archive.on("error", (err) => {
+//       console.error("Archive error:", err);
+//       res.status(500).end();
+//     });
+//     archive.pipe(res);
+
+//     // Add remote PDF streams to zip
+//     for (const report of reports) {
+//       try {
+//         const stream = await axios.get(report.secure_url, { responseType: "stream" });
+//         const safeName = `${report.student.rollNo}-${report.student.name}`.replace(/[\/\\:*?"<>| ]+/g, "_");
+//         archive.append(stream.data, { name: `reports/${safeName}.pdf` });
+//       } catch (err) {
+//         console.error("Error fetching PDF for", report.student.name, err);
+//       }
+//     }
+
+//     await archive.finalize();
+//   } catch (err) {
+//     console.error("Download route error:", err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
+
+
+
+
+// router.get("/reports/download", async (req, res) => {
+//   try {
+//     const { batch, date, name = "", rollNo = "" } = req.query;
+
+//     if (!batch || !date) {
+//       return res.status(400).json({ error: "Batch and date are required." });
+//     }
+
+//     const studentFilter = {
+//       batch,
+//       ...(name || rollNo
+//         ? {
+//             $and: [
+//               name ? { name: { $regex: name, $options: "i" } } : {},
+//               rollNo ? { rollNo: { $regex: rollNo, $options: "i" } } : {},
+//             ],
+//           }
+//         : {}),
+//     };
+
+//     const students = await StudentModel.find(studentFilter).select("_id name rollNo");
+//     if (!students.length) {
+//       return res.status(404).json({ error: "No matching students." });
+//     }
+
+//     const start = new Date(date);
+//     start.setUTCHours(0, 0, 0, 0);
+//     const end = new Date(date);
+//     end.setUTCHours(23, 59, 59, 999);
+
+//     const reports = await ReportCardModel.find({
+//       student: { $in: students.map((s) => s._id) },
+//       reportDate: { $gte: start, $lte: end },
+//     }).populate("student");
+
+//     if (!reports.length) {
+//       return res.status(404).json({ error: "No reports found." });
+//     }
+
+//     // Pre-fetch all report files into memory as buffers
+//     const files = [];
+
+//     for (const report of reports) {
+//       try {
+//         const pdfResponse = await axios.get(report.secure_url, {
+//           responseType: "arraybuffer",
+//         });
+
+//         const safeName = `${report.student.rollNo}-${report.student.name}`
+//           .replace(/[\/\\:*?"<>| ]+/g, "_");
+
+//         files.push({
+//           buffer: pdfResponse.data,
+//           name: `reports/${safeName}.pdf`,
+//         });
+//       } catch (err) {
+//         console.error("Error fetching PDF for", report.student?.name, err.message);
+//         // Skip this file
+//       }
+//     }
+
+//     // ❌ No valid PDFs fetched
+//     if (!files.length) {
+//       return res.status(500).json({ error: "No valid reports to download." });
+//     }
+
+//     // ✅ Start ZIP stream
+//     res.setHeader("Content-Type", "application/zip");
+//     res.setHeader(
+//       "Content-Disposition",
+//       `attachment; filename=PTM_Reports_${batch}_${date}.zip`
+//     );
+
+//     const archive = archiver("zip", { zlib: { level: 9 } });
+
+//     archive.on("error", (err) => {
+//       console.error("Archiver error:", err);
+//       res.status(500).end();
+//     });
+
+//     archive.pipe(res);
+
+//     // ✅ Append each buffer to archive
+//     for (const file of files) {
+//       archive.append(file.buffer, { name: file.name });
+//     }
+
+//     await archive.finalize();
+//   } catch (err) {
+//     console.error("Server error during download:", err);
+//     if (!res.headersSent) {
+//       res.status(500).json({ error: "Server error during report download." });
+//     } else {
+//       res.end();
+//     }
+//   }
+// });
+
+
+router.get("/reports/download", async (req, res) => {
+  try {
+    const { batch, date, name = "", rollNo = "" } = req.query;
+
+    if (!batch || !date) {
+      return res.status(400).json({ error: "Batch and date are required." });
+    }
+
+    const studentFilter = {
+      batch,
+      ...(name || rollNo
+        ? {
+            $and: [
+              name ? { name: { $regex: name, $options: "i" } } : {},
+              rollNo ? { rollNo: { $regex: rollNo, $options: "i" } } : {},
+            ],
+          }
+        : {}),
+    };
+
+    const students = await StudentModel.find(studentFilter).select("_id name rollNo");
+    if (!students.length) {
+      return res.status(404).json({ error: "No matching students." });
+    }
+
+    const start = new Date(date);
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date(date);
+    end.setUTCHours(23, 59, 59, 999);
+
+    const reports = await ReportCardModel.find({
+      student: { $in: students.map((s) => s._id) },
+      reportDate: { $gte: start, $lte: end },
+    }).populate("student");
+
+    if (!reports.length) {
+      return res.status(404).json({ error: "No reports found." });
+    }
+
+    // Pre-fetch all report files into memory as buffers
+    const files = [];
+
+    for (const report of reports) {
+      try {
+        const pdfResponse = await axios.get(report.secure_url, {
+          responseType: "arraybuffer",
+        });
+
+        const safeName = `${report.student.rollNo}-${report.student.name}`
+          .replace(/[\/\\:*?"<>| ]+/g, "_");
+
+        files.push({
+          buffer: pdfResponse.data,
+          name: `reports/${safeName}.pdf`,
+        });
+      } catch (err) {
+        console.error("Error fetching PDF for", report.student?.name, err.message);
+        // Skip this file
+      }
+    }
+
+    // ❌ No valid PDFs fetched
+    if (!files.length) {
+      return res.status(500).json({ error: "No valid reports to download." });
+    }
+
+    // ✅ Start ZIP stream
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=PTM_Reports_${batch}_${date}.zip`
+    );
+
+    const archive = archiver("zip", { zlib: { level: 9 } });
+
+    archive.on("error", (err) => {
+      console.error("Archiver error:", err);
+      res.status(500).end();
+    });
+
+    archive.pipe(res);
+
+    // ✅ Append each buffer to archive
+    for (const file of files) {
+      archive.append(file.buffer, { name: file.name });
+    }
+
+    await archive.finalize();
+  } catch (err) {
+    console.error("Server error during download:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Server error during report download." });
+    } else {
+      res.end();
+    }
+  }
+});
+
+
+
+
+
+
 
 
 
