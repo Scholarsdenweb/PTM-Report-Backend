@@ -8,6 +8,8 @@ const PTMRoute = require("./routes/ptmRoutes.js");
 const userRoutes = require("./routes/userRoutes");
 const authRoutes = require("./routes/authRoutes");
 const batchRoutes = require("./routes/batchRoutes");
+const studentRoutes = require("./routes/student");
+
 
 require("dotenv").config();
 app.use(cookieParser());
@@ -48,6 +50,8 @@ app.use("/api/ptm", PTMRoute);
 app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes); // Login route
 app.use("/api/batches", batchRoutes);
+app.use("/api/students", studentRoutes);
+
 
 mongoose
   .connect(process.env.MONGODB_URI, {
