@@ -3,6 +3,19 @@ const path = require("path");
 const xlsx = require("xlsx");
 const generatePerformanceReportPDF = require("./generatePerformanceReportPDF");
 
+require('dotenv').config();
+
+
+  const cloud_name = process.env.CLOUDINARY_CLOUD_NAME;
+  const api_key = process.env.CLOUDINARY_API_KEY;
+  const api_secret = process.env.CLOUDINARY_API_SECRET;
+
+
+
+
+
+
+
 const createReportFromExcelFile = async (filePath) => {
   const workbook = xlsx.readFile(filePath, { raw: true });
   // const workbook = xlsx.readFile(filePath, { raw: true });
@@ -239,6 +252,7 @@ const createReportFromExcelFile = async (filePath) => {
       { key: "History+Civics", label: "History + Civics" },
       { key: "Total", label: "Total" },
     ];
+// Construct Cloudinary image URL based on name and roll number
 
     const feedback = subjects.reduce((acc, { key, label }) => {
       const response = row[`${key}_CR`];
@@ -265,6 +279,15 @@ const createReportFromExcelFile = async (filePath) => {
       return acc;
     }, []);
 
+
+    const cloudinaryBase = `https://res.cloudinary.com/${cloud_name}/image/upload/PTM_Document/Student_Images`; // update as needed
+const imageName = `${(row["Name"] || "Unknown").trim().replace(/\s+/g, "_")}_${(row["Roll No."] || "").toString().trim()}`;
+const photoUrl = `${cloudinaryBase}/${imageName}.jpg`; // or .png if applicable
+
+
+
+console.log("photoUrl imageUrl cloudinaryBase", photoUrl, imageName, cloudinaryBase);
+
     return {
       name: row["NAME"] || row["Name"] || "Unnamed",
       rollNo: (row["ROLL NO"] || row["Roll No."] || "Unknown").replace(
@@ -276,7 +299,8 @@ const createReportFromExcelFile = async (filePath) => {
       fatherName: row["F_N"] || "",
       batchStrength: 50,
       // photo : `../photographs/${row["Name"]}_${row["Roll No."]}`,
-      photo: "../assets/student.png",
+      photo: photoUrl,
+      // photo: "../assets/st/udent.png",
       headerImage: "../assets/headerImage.png",
       subjectWiseData,
       jeeMain,
