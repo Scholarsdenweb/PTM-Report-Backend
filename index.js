@@ -21,6 +21,7 @@ app.use(cookieParser());
 //   })
 // );
 
+const port = process.env.PORT || 5003;
 
 
 
@@ -60,6 +61,6 @@ mongoose
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error("MongoDB Connection Error:", err));
 
-app.listen(5001, () => {
-  console.log("Server running on port 5001");
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });
