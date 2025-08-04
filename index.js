@@ -20,26 +20,31 @@ app.use(cookieParser());
 //     credentials: true
 //   })
 // );
+app.use(cors({
+  origin: (origin, callback) => callback(null, origin),
+  credentials: true,
+}));
+
 
 const port = process.env.PORT || 5003;
 
 
 
-const allowedOrigin = 'http://localhost:5173';  // Your frontend URL
+// const allowedOrigin = 'http://localhost:5173';  // Your frontend URL
 
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', allowedOrigin); 
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS'); // allowed methods
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');  // allowed headers
+// app.use((req, res, next) => {
+//   res.setHeader('Access-Control-Allow-Origin', '*'); 
+//   res.setHeader('Access-Control-Allow-Credentials', 'true');
+//   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS'); // allowed methods
+//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');  // allowed headers
 
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(204);
-  }
+//   // Handle preflight requests
+//   if (req.method === 'OPTIONS') {
+//     return res.sendStatus(204);
+//   }
 
-  next();
-});
+//   next();
+// });
 
 
 
@@ -52,6 +57,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes); // Login route
 app.use("/api/batches", batchRoutes);
 app.use("/api/students", studentRoutes);
+
 
 
 mongoose

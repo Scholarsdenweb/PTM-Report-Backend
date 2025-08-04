@@ -48,4 +48,15 @@ router.get('/me',authMiddleware, async (req, res) => {
   }
 })
 
+
+router.post("/logout", (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    sameSite: "Lax",
+    secure: false, // Set to true in production with HTTPS
+  });
+  res.sendStatus(200);
+});
+
+
 module.exports = router;
