@@ -4,6 +4,11 @@ const fs = require("fs");
 const puppeteer = require("puppeteer");
 const path = require("path");
 
+const puppeteerCore = require("puppeteer-core");
+const chromium = require("@sparticuz/chromium-min");
+
+require("dotenv").config();
+
 const generatePerformanceReportPDF = async (data, filePath) => {
   console.log("data form generatePerformanceReportPDF", data);
 
@@ -144,6 +149,8 @@ const generatePerformanceReportPDF = async (data, filePath) => {
 
   if (data.jeeAdv?.length > 0) {
     jeeAdvancedTable = `
+    <div class="table-container">
+
         <div class="section-title"><span>JEE (Advanced) Pattern</span></div>
 
     <table class="advanced-table">
@@ -171,6 +178,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
         ${jeeAdvancedRows}
       </tbody>
     </table>
+    </div>
   `;
   }
 
@@ -198,6 +206,8 @@ const generatePerformanceReportPDF = async (data, filePath) => {
 
   if (data.subjecttivePattern?.length > 0) {
     subjectiveTable = `
+    <div class="table-container">
+
         <div class="section-title"><span>Subjective Pattern</span></div>
 
     <table class="advanced-table">
@@ -221,6 +231,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
         ${subjectiveRows}
       </tbody>
     </table>
+    </div>
   `;
   }
 
@@ -233,6 +244,8 @@ const generatePerformanceReportPDF = async (data, filePath) => {
   }
 
   const graph = `
+  <div class="table-container">
+
       <div class="section-title"><span>Graph Representation</span></div>
 
   <div class="charts">
@@ -249,6 +262,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
             <canvas id="lineChart" width="500" height="350"></canvas>
           </div>
         </div>
+      </div>
       </div>
 
 `;
@@ -284,7 +298,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
       .container {
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        gap: 10px;
         padding: 20px;
         
 
@@ -341,12 +355,13 @@ const generatePerformanceReportPDF = async (data, filePath) => {
         text-align: center;
         font-size: 32px;
         font-weight: bold;
-        padding-top: 50px;
+        padding-top: ${jeeMainRows.length > 3 ? "10px" : "30px"};
+        margin-bottom : ${jeeMainRows.length > 3 ? "5px" : "20px"};;
       }
 
       .section-title span {
         border-bottom: 3px solid black;
-        padding-bottom: 4px;
+        margin-bottom: 4px;
       }
 
       .marks-table {
@@ -365,7 +380,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
 
       .charts {
         display: flex;
-        margin-top: 10px;
+        margin-top: 1px;
         justify-content: space-between;
         page-break-inside: avoid;
         break-inside: avoid;
@@ -412,7 +427,7 @@ table {
     break-inside: avoid;
     display : flex;
     flex-direction : column;
-    gap : 50px;
+    gap : ${jeeMainRows.length > 3 ? "20px" : "30px"};
   }
 
       .graph-container {
@@ -472,6 +487,7 @@ table {
           </div>
         </div>
       </div>
+<div class="table-container">
 
 ${heading}
       <table class="marks-table">
@@ -484,6 +500,7 @@ ${heading}
           ${jeeMainRows}
         </tbody>
       </table>
+      </div>
 
     ${showGraph}
     </div>
@@ -507,6 +524,7 @@ ${heading}
         </tbody>
       </table>
       </div>
+<div class="table-container">
 
       <div class="section-title"><span>Faculty Feedback</span></div>
       <table class="marks-table">
@@ -523,6 +541,7 @@ ${heading}
           ${feedbackRows}
         </tbody>
       </table>
+    </div>
     </div>
 
     <script>
@@ -601,18 +620,40 @@ ${heading}
     </script>
   </body>
 </html>`;
+let browser = null;
+  try {
+    if (process.env.NODE_ENV === "production") {
+      // Configure the version based on your package.json (for your future usage).
+      const executablePath = await chromium.executablePath(
+        "https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar"
+      );
+      browser = await puppeteerCore.launch({
+        executablePath,
+        // You can pass other configs as required
+        args: chromium.args,
+        headless: chromium.headless,
+        defaultViewport: chromium.defaultViewport,
+      });
+    } else {
+      browser = await puppeteer.launch({
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      });
+    }
+    const page = await browser.newPage();
 
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
+    // Set HTML content
+    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
-  // Set HTML content
-  await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+    // Inject Chart.js from CDN
+    await page.addScriptTag({ url: "https://cdn.jsdelivr.net/npm/chart.js" });
 
-  // Inject Chart.js from CDN
-  await page.addScriptTag({ url: "https://cdn.jsdelivr.net/npm/chart.js" });
+    await page.pdf({ path: filePath, format: "A4", printBackground: true });
+        await browser.close();
 
-  await page.pdf({ path: filePath, format: "A4", printBackground: true });
-  await browser.close();
+  } catch (error) {
+    console.log("error for genaratePerformanceReeportPDF", error);
+  }
 };
 
 module.exports = generatePerformanceReportPDF;

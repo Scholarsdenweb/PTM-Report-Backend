@@ -276,7 +276,7 @@ const createReportFromExcelFile = async (filePath) => {
       fatherName: row["F_N"] || "",
       batchStrength: 50,
       // photo : `../photographs/${row["Name"]}_${row["Roll No."]}`,
-      photo: "./student.png",
+      photo: "../assets/student.png",
       headerImage: "../assets/headerImage.png",
       subjectWiseData,
       jeeMain,
@@ -301,11 +301,12 @@ const createReportFromExcelFile = async (filePath) => {
     try {
 
       await generatePerformanceReportPDF(studentData, reportPath);
+
       reportResults.push({ studentData, reportPath });
 
       console.log(`✅ PDF generated: ${fileName}`);
     } catch (err) {
-      console.error(`❌ Error for ${studentData.name}: ${err.message}`);
+      console.log(`❌ Error for ${studentData.name}: ${err}`);
     }
   }
   return reportResults;
