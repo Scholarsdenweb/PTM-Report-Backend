@@ -130,7 +130,7 @@ router.get("/reports", async (req, res) => {
       name = "",
       rollNo = "",
       page = 1,
-      limit = 10,
+      limit = 9,
     } = req.query;
 
     if (!batch || !date) {

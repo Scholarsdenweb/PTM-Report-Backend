@@ -106,6 +106,8 @@ router.post(
     const uploadPromises = req.files.map((file) => {
       return new Promise((resolve) => {
         try {
+
+          console.log("File.originalName", file.originalname);
           const [rawName, rollNoWithExt] = file.originalname.split("_");
           const rollNo = rollNoWithExt?.split(".")[0];
           const name = rawName.replace(/([A-Z])/g, " $1").trim(); // e.g., RiyaSharma → Riya Sharma

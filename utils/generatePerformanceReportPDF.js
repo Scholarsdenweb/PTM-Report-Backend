@@ -14,6 +14,8 @@ const generatePerformanceReportPDF = async (data, filePath) => {
 
   const getImageAsBase64 = (imagePath) => {
     try {
+
+      console.log("get image path getImageAsBase64 ", imagePath);
       const logoPath = path.resolve(__dirname, imagePath);
       const logoBase64 = fs.readFileSync(logoPath, { encoding: "base64" });
 
@@ -257,7 +259,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
         </div>
 
         <div class="headingAndGraph">
-          <h4>Student performance from beginning</h4>
+          <h4>Student Performance From Beginning</h4>
           <div class="graph-container">
             <canvas id="lineChart" width="500" height="350"></canvas>
           </div>
@@ -338,6 +340,11 @@ const generatePerformanceReportPDF = async (data, filePath) => {
       .photo-section {
         background: rgb(251, 232, 203);
         height: 100%;
+      }
+      .photo-section img {
+      margin-top: 10px;
+        width: 125px;
+        height: 125px;
       }
 
       .info-section {
@@ -475,7 +482,7 @@ table {
 
       <div class="student-info">
         <div class="photo-section">
-          <img src="${getImageAsBase64(data.photo)}" alt="Student Photo" />
+          <img src="${data.photo}" alt="Student Photo" />
           <p><strong>Name:</strong> ${data.name}</p>
           <p><strong>Roll No.:</strong> ${data.rollNo}</p>
         </div>

@@ -299,7 +299,7 @@ console.log("photoUrl imageUrl cloudinaryBase", photoUrl, imageName, cloudinaryB
       fatherName: row["F_N"] || "",
       batchStrength: 50,
       // photo : `../photographs/${row["Name"]}_${row["Roll No."]}`,
-      photo: photoUrl,
+      photo: "https://res.cloudinary.com/dtytgoj3f/image/upload/PTM_Document/Student_Images/Aarav_Bhatia_2024090033.jpg",
       // photo: "../assets/st/udent.png",
       headerImage: "../assets/headerImage.png",
       subjectWiseData,
