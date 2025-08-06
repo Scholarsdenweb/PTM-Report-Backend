@@ -488,9 +488,11 @@ table {
         </div>
         <div class="info-section">
         <div>
+        <p><strong>Date </strong> ${data.ptmDate} </p>
           <p><strong>Batch:</strong> ${data.batch}</p>
           <p><strong>Mother's Name:</strong> ${data.motherName}</p>
           <p><strong>Father's Name:</strong> ${data.fatherName}</p>
+          <p><strong>Batch Strength:</strong> ${data.batchStrength}</p>
           </div>
         </div>
       </div>

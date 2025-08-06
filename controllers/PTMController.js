@@ -17,13 +17,17 @@ class PTMController {
     this.reportService = new ReportService();
     this.whatsAppService = new WhatsAppService();
   }
- 
+
   async handleUpload(req, res) {
     try {
-      const filePath = req.file.path; // Excel file path from multer
+      const filePath = req?.file?.path; // Excel file path from multer
+      const { ptmDate } = req.body;
 
-      console.log("filePath", filePath);
-      const reportDataArray = await createReportFromExcelFile(filePath); // returns [{ studentData, reportPath }]
+      console.log("filePath", filePath, ptmDate);
+      const reportDataArray = await createReportFromExcelFile(
+        filePath,
+        ptmDate
+      ); // returns [{ studentData, reportPath }]
 
       const results = [];
 
@@ -57,7 +61,7 @@ class PTMController {
           student: student._id,
           public_id: uploadedUrl.public_id,
           secure_url: uploadedUrl.secure_url,
-          reportDate: new Date(),
+          reportDate: ptmDate,
         });
 
         results.push({
@@ -76,6 +80,8 @@ class PTMController {
       }
 
       await removeFileFormServer(filePath);
+
+      console.log("result from PTMController", results);
 
       res.status(200).json({
         message: "Reports generated successfully",

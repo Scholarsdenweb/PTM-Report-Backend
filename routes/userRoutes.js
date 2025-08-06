@@ -8,10 +8,10 @@ const User = require('../models/User');
 router.post('/', async (req, res) => {
 
   console.log("req.body", req.body);
-  const { username, email, password } = req.body;
+  const { username, email, password, role } = req.body;
 
   // Basic validation
-  if (!username || !email || !password) {
+  if (!username || !email || !password || !role ) {
     return res.status(400).json({ message: 'Please fill all fields' });
   }
 
@@ -23,7 +23,7 @@ router.post('/', async (req, res) => {
     }
 
     // Create and save user
-    const newUser = new User({ username, email, password });
+    const newUser = new User({ username, email, password, role });
     await newUser.save();
 
     res.status(201).json({ message: 'User created successfully', userId: newUser._id });

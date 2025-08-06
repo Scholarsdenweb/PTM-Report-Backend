@@ -14,15 +14,13 @@
 
 // module.exports = upload;
 
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
+const uploadDir = path.join(__dirname, "..", "uploads");
 
-
-
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-
-const uploadDir = path.join(__dirname, '..', 'uploads');
+console.log("uploadDIr", uploadDir);
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 
 const storage = multer.diskStorage({
@@ -30,8 +28,8 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
+    cb(null, Date.now() + "-" + file.originalname);
+  },
 });
 
 const upload = multer({ storage });

@@ -53,6 +53,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Must come after middleware
 app.use("/api/ptm", PTMRoute);
+// app.use("/api/faculty", facultyRoute);
 app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes); // Login route
 app.use("/api/batches", batchRoutes);

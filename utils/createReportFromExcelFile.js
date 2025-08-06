@@ -3,20 +3,22 @@ const path = require("path");
 const xlsx = require("xlsx");
 const generatePerformanceReportPDF = require("./generatePerformanceReportPDF");
 
-require('dotenv').config();
+require("dotenv").config();
 
+const cloud_name = process.env.CLOUDINARY_CLOUD_NAME;
+const api_key = process.env.CLOUDINARY_API_KEY;
+const api_secret = process.env.CLOUDINARY_API_SECRET;
 
-  const cloud_name = process.env.CLOUDINARY_CLOUD_NAME;
-  const api_key = process.env.CLOUDINARY_API_KEY;
-  const api_secret = process.env.CLOUDINARY_API_SECRET;
+const dayjs = require("dayjs");
+const weekday = require("dayjs/plugin/weekday");
+const localizedFormat = require("dayjs/plugin/localizedFormat");
+const { checkIfReportCardExists } = require("./checkIfReportCardExists.JS");
+require("dayjs/locale/en");
 
+dayjs.extend(weekday);
+dayjs.extend(localizedFormat);
 
-
-
-
-
-
-const createReportFromExcelFile = async (filePath) => {
+const createReportFromExcelFile = async (filePath, ptmDate) => {
   const workbook = xlsx.readFile(filePath, { raw: true });
   // const workbook = xlsx.readFile(filePath, { raw: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -33,6 +35,15 @@ const createReportFromExcelFile = async (filePath) => {
   // Extract student data row by row
   const parseReportData = (row) => {
     console.log("row from parseReportData", row);
+
+    const { exists, report } = checkIfReportCardExists(row["rollNo"], ptmDate);
+
+    console.log("exists, report", exists, report);
+
+    if (exists) {
+      console.log("exists from parseReportData", exists);
+      return;
+    }
 
     const attendance = [];
 
@@ -252,7 +263,7 @@ const createReportFromExcelFile = async (filePath) => {
       { key: "History+Civics", label: "History + Civics" },
       { key: "Total", label: "Total" },
     ];
-// Construct Cloudinary image URL based on name and roll number
+    // Construct Cloudinary image URL based on name and roll number
 
     const feedback = subjects.reduce((acc, { key, label }) => {
       const response = row[`${key}_CR`];
@@ -279,14 +290,20 @@ const createReportFromExcelFile = async (filePath) => {
       return acc;
     }, []);
 
-
     const cloudinaryBase = `https://res.cloudinary.com/${cloud_name}/image/upload/PTM_Document/Student_Images`; // update as needed
-const imageName = `${(row["Name"] || "Unknown").trim().replace(/\s+/g, "_")}_${(row["Roll No."] || "").toString().trim()}`;
-const photoUrl = `${cloudinaryBase}/${imageName}.jpg`; // or .png if applicable
+    const imageName = `${(row["Name"] || "Unknown")
+      .trim()
+      .replace(/\s+/g, "_")}_${(row["Roll No."] || "").toString().trim()}`;
+    const photoUrl = `${cloudinaryBase}/${imageName}.jpg`; // or .png if applicable
 
+    const formatted = dayjs(ptmDate).format("DD-MM-YY dddd"); // 'dddd' = full day name
 
-
-console.log("photoUrl imageUrl cloudinaryBase", photoUrl, imageName, cloudinaryBase);
+    console.log(
+      "photoUrl imageUrl cloudinaryBase",
+      photoUrl,
+      imageName,
+      cloudinaryBase
+    );
 
     return {
       name: row["NAME"] || row["Name"] || "Unnamed",
@@ -297,9 +314,10 @@ console.log("photoUrl imageUrl cloudinaryBase", photoUrl, imageName, cloudinaryB
       batch: row["BATCH"] || row["Batch"] || "",
       motherName: row["M_N"] || "",
       fatherName: row["F_N"] || "",
-      batchStrength: 50,
+      batchStrength: row["Str"],
       // photo : `../photographs/${row["Name"]}_${row["Roll No."]}`,
-      photo: "https://res.cloudinary.com/dtytgoj3f/image/upload/PTM_Document/Student_Images/Aarav_Bhatia_2024090033.jpg",
+      photo: photoUrl,
+      ptmDate: formatted,
       // photo: "../assets/st/udent.png",
       headerImage: "../assets/headerImage.png",
       subjectWiseData,
@@ -323,7 +341,6 @@ console.log("photoUrl imageUrl cloudinaryBase", photoUrl, imageName, cloudinaryB
     const reportPath = path.join(outputDir, fileName);
 
     try {
-
       await generatePerformanceReportPDF(studentData, reportPath);
 
       reportResults.push({ studentData, reportPath });
@@ -335,7 +352,5 @@ console.log("photoUrl imageUrl cloudinaryBase", photoUrl, imageName, cloudinaryB
   }
   return reportResults;
 };
-
-
 
 module.exports = createReportFromExcelFile;
