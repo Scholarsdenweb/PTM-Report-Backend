@@ -29,14 +29,14 @@ router.post("/login", async (req, res) => {
   // Set cookie
   res
     .cookie("token", token, {
-      httpOnly: true,
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "Lax",
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     })
   res
     .cookie("role", user.role, {
-      httpOnly: true,
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "Lax",
       maxAge: 24 * 60 * 60 * 1000, // 1 day

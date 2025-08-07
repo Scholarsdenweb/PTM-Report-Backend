@@ -89,9 +89,7 @@ class PTMController {
       });
     } catch (err) {
       console.error("Error in PTMController:", err);
-      res
-        .status(500)
-        .json({ message: "An error occurred while processing reports." });
+      res.status(500).json({  err });
     }
   }
 

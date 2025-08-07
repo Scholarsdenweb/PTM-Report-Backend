@@ -12,7 +12,7 @@ const api_secret = process.env.CLOUDINARY_API_SECRET;
 const dayjs = require("dayjs");
 const weekday = require("dayjs/plugin/weekday");
 const localizedFormat = require("dayjs/plugin/localizedFormat");
-const { checkIfReportCardExists } = require("./checkIfReportCardExists.JS");
+const { checkIfReportCardExists } = require("./checkIfReportCardExists.js");
 require("dayjs/locale/en");
 
 dayjs.extend(weekday);
@@ -35,15 +35,6 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
   // Extract student data row by row
   const parseReportData = (row) => {
     console.log("row from parseReportData", row);
-
-    const { exists, report } = checkIfReportCardExists(row["rollNo"], ptmDate);
-
-    console.log("exists, report", exists, report);
-
-    if (exists) {
-      console.log("exists from parseReportData", exists);
-      return;
-    }
 
     const attendance = [];
 
@@ -333,8 +324,39 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
 
   // Generate PDFs
 
+
+
+  const rollNoCounts = new Map();
+
+// Count occurrences of each Roll No.
+for (const row of rows) {
+  const rollNo = row["Roll No."];
+  if (!rollNo) continue;
+
+  const count = rollNoCounts.get(rollNo) || 0;
+  rollNoCounts.set(rollNo, count + 1);
+}
+
+// Detect duplicates
+const duplicateRollNos = [...rollNoCounts.entries()]
+  .filter(([_, count]) => count > 1)
+  .map(([rollNo]) => rollNo);
+
+if (duplicateRollNos.length > 0) {
+  throw new Error(`❌ Duplicate Roll No. found: ${duplicateRollNos.join(", ")}`);
+}
+
+
   console.log("Generating reports...");
   for (const row of rows) {
+    const { exists, report } = await checkIfReportCardExists(row["Roll No."], ptmDate);
+
+    console.log("exists, report", exists, report);
+
+    if (exists) {
+      console.log("exists from parseReportData", exists);
+      continue;
+    }
     const studentData = parseReportData(row);
     const safeName = (studentData.name || "Student").replace(/\s+/g, "_");
     const fileName = `${safeName}_${studentData.rollNo}.pdf`;
