@@ -5,9 +5,8 @@ const generatePerformanceReportPDF = require("./generatePerformanceReportPDF");
 
 require("dotenv").config();
 
-const cloud_name = process.env.CLOUDINARY_CLOUD_NAME;
-const api_key = process.env.CLOUDINARY_API_KEY;
-const api_secret = process.env.CLOUDINARY_API_SECRET;
+// const cloud_name = process.env.CLOUDINARY_CLOUD_NAME;
+
 
 const dayjs = require("dayjs");
 const weekday = require("dayjs/plugin/weekday");
@@ -33,7 +32,7 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
   const reportResults = [];
 
   // Extract student data row by row
-  const parseReportData = (row) => {
+  const parseReportData = async(row) => {
     console.log("row from parseReportData", row);
 
     const attendance = [];
@@ -281,11 +280,12 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
       return acc;
     }, []);
 
-    const cloudinaryBase = `https://res.cloudinary.com/${cloud_name}/image/upload/PTM_Document/Student_Images`; // update as needed
+    // const cloudinaryBase = `https://res.cloudinary.com/${cloud_name}/image/upload/PTM_Document/Student_Images`; // update as needed
     const imageName = `${(row["Name"] || "Unknown")
       .trim()
       .replace(/\s+/g, "_")}_${(row["Roll No."] || "").toString().trim()}`;
-    const photoUrl = `${cloudinaryBase}/${imageName}.jpg`; // or .png if applicable
+    const photoUrl = await findImageInCloudinaryFolder(imageName);
+    // const photoUrl = `${cloudinaryBase}/${imageName}.jpg`; // or .png if applicable
 
     const formatted = dayjs(ptmDate).format("DD-MM-YY dddd"); // 'dddd' = full day name
 
@@ -357,7 +357,7 @@ if (duplicateRollNos.length > 0) {
       console.log("exists from parseReportData", exists);
       continue;
     }
-    const studentData = parseReportData(row);
+    const studentData = await parseReportData(row);
     const safeName = (studentData.name || "Student").replace(/\s+/g, "_");
     const fileName = `${safeName}_${studentData.rollNo}.pdf`;
     const reportPath = path.join(outputDir, fileName);

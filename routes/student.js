@@ -90,7 +90,7 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const cloudinary = require("../utils/cloudinary");
+const cloudinary = require("../utils/cloudinary/cloudinarySetup");
 const Student = require("../models/Student");
 const stream = require("stream");
 
