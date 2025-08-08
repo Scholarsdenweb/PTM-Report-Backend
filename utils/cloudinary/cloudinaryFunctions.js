@@ -1,16 +1,6 @@
-
-
 const cloudinary = require("./cloudinarySetup.js");
 
-
-
-
-
-
-
-
-
-export async function findImageInCloudinaryFolder(folder, imageName) {
+async function findImageInCloudinaryFolder(folder, imageName) {
   const fullPublicId = `${folder}/${imageName}`; // Don't add extension
 
   const result = await cloudinary.search
@@ -23,9 +13,11 @@ export async function findImageInCloudinaryFolder(folder, imageName) {
     return {
       url: resource.secure_url,
       format: resource.format,
-      public_id: resource.public_id
+      public_id: resource.public_id,
     };
   } else {
     return null; // Not found
   }
 }
+
+module.exports = { findImageInCloudinaryFolder };

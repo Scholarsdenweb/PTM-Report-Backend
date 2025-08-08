@@ -6,7 +6,7 @@ const generatePerformanceReportPDF = require("./generatePerformanceReportPDF");
 require("dotenv").config();
 
 // const cloud_name = process.env.CLOUDINARY_CLOUD_NAME;
-
+const  { findImageInCloudinaryFolder } =  require("./cloudinary/cloudinaryFunctions.js");
 
 const dayjs = require("dayjs");
 const weekday = require("dayjs/plugin/weekday");
@@ -293,7 +293,6 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
       "photoUrl imageUrl cloudinaryBase",
       photoUrl,
       imageName,
-      cloudinaryBase
     );
 
     return {

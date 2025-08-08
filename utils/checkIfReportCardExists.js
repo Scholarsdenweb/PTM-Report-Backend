@@ -1,18 +1,18 @@
 // utils/checkIfReportCardExists.js
 
-import ReportCard from '../models/ReportCard.js';
-import Student from '../models/Student.js';
-import dayjs from 'dayjs';
+const ReportCard = require("../models/ReportCard.js");
+const Student = require("../models/Student.js");
+const dayjs = require("dayjs");
 
-export async function checkIfReportCardExists(rollNo, ptmDate) {
+async function checkIfReportCardExists(rollNo, ptmDate) {
   const student = await Student.findOne({ rollNo });
 
   if (!student) {
-    return { exists: false, reason: 'Student not found' };
+    return { exists: false, reason: "Student not found" };
   }
 
-  const startOfDay = dayjs(ptmDate).startOf('day').toDate();
-  const endOfDay = dayjs(ptmDate).endOf('day').toDate();
+  const startOfDay = dayjs(ptmDate).startOf("day").toDate();
+  const endOfDay = dayjs(ptmDate).endOf("day").toDate();
 
   const reportExists = await ReportCard.findOne({
     student: student._id,
@@ -28,3 +28,5 @@ export async function checkIfReportCardExists(rollNo, ptmDate) {
 
   return { exists: false };
 }
+
+module.exports = { checkIfReportCardExists };
