@@ -68,7 +68,7 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
         held: present + absent,
         present,
         absent,
-        percent: `${percent}%`,
+        percent: `${percent}`,
       });
     });
 
@@ -139,7 +139,7 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
         const rankKey = `Result_${date}`;
         const totalKey = `Result_${date}_Total`;
         const altTotalKey = `Result_${date}_Tot`;
-        const highestKey = `Result_${date}_High`;
+        const highestKey = `Result_${date}_Highest Marks`;
 
         entry.rank = row[rankKey] || "-";
         entry.total = row[totalKey] || row[altTotalKey] || 0;
@@ -281,9 +281,9 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
     }, []);
 
     // const cloudinaryBase = `https://res.cloudinary.com/${cloud_name}/image/upload/PTM_Document/Student_Images`; // update as needed
-    const imageName = `${(row["Name"] || "Unknown")
+    const imageName = `${(row["Name"] || row["NAME"] || "Unknown")
       .trim()
-      .replace(/\s+/g, "_")}_${(row["Roll No."] || "").toString().trim()}`;
+      .replace(/\s+/g, "_")}_${(row["Roll No."] || row["ROLL NO"] || "").toString().trim()}`;
     const photoUrl = await findImageInCloudinaryFolder(imageName);
     // const photoUrl = `${cloudinaryBase}/${imageName}.jpg`; // or .png if applicable
 
@@ -292,7 +292,7 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
     console.log(
       "photoUrl imageUrl cloudinaryBase",
       photoUrl,
-      imageName,
+      imageName
     );
 
     return {
@@ -302,13 +302,13 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
         ""
       ),
       batch: row["BATCH"] || row["Batch"] || "",
-      motherName: row["M_N"] || "",
-      fatherName: row["F_N"] || "",
+      motherName: row["M_N"] || row["Mother Name"] || "",
+      fatherName: row["F_N"] || row["Father Name"] || "",
       batchStrength: row["Str"],
       // photo : `../photographs/${row["Name"]}_${row["Roll No."]}`,
       photo: photoUrl,
       ptmDate: formatted,
-      // photo: "../assets/st/udent.png",
+      // photo: "../assets/student.png",
       headerImage: "../assets/headerImage.png",
       subjectWiseData,
       jeeMain,

@@ -11,6 +11,7 @@ require("dotenv").config();
 
 const generatePerformanceReportPDF = async (data, filePath) => {
   console.log("data form generatePerformanceReportPDF", data);
+  console.log("data form generatePerformanceReportPDF", data.photo);
 
   const getImageAsBase64 = (imagePath) => {
     try {
@@ -24,6 +25,10 @@ const generatePerformanceReportPDF = async (data, filePath) => {
       return null;
     }
   };
+
+
+
+  console.log("data form generatePerformanceReportPDF", data);
 
   // 1. Get all available subjects from jeeMain data
   const allPossibleSubjects = [
@@ -482,7 +487,7 @@ table {
 
       <div class="student-info">
         <div class="photo-section">
-          <img src="${data.photo}" alt="Student Photo" />
+          <img src="${data.photo.url}" alt="Student Photo" />
           <p><strong>Name:</strong> ${data.name}</p>
           <p><strong>Roll No.:</strong> ${data.rollNo}</p>
         </div>

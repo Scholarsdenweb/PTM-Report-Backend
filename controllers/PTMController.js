@@ -124,41 +124,41 @@ class PTMController {
     }
   }
 
-  async getAllReports(req, res) {
-    try {
-      const isSecure = req.query.secure === "true"; // switch via query param
-      const reports = await ReportCardModel.find()
-        .populate("student")
-        .sort({ reportDate: -1 }); // latest first
+  // async getAllReports(req, res) {
+  //   try {
+  //     const isSecure = req.query.secure === "true"; // switch via query param
+  //     const reports = await ReportCardModel.find()
+  //       .populate("student")
+  //       .sort({ reportDate: -1 }); // latest first
 
-      const formattedReports = reports.map((report) => {
-        const publicId = report.reportCardUrl
-          .split("/")
-          .slice(-2)
-          .join("/")
-          .replace(".pdf", ""); // Extract public_id from URL
+  //     const formattedReports = reports.map((report) => {
+  //       const publicId = report.reportCardUrl
+  //         .split("/")
+  //         .slice(-2)
+  //         .join("/")
+  //         .replace(".pdf", ""); // Extract public_id from URL
 
-        const finalUrl = isSecure
-          ? this.reportService.generateSignedUrl(publicId)
-          : report.reportCardUrl;
-        return {
-          name: report.student.name,
-          rollNo: report.student.rollNo,
-          batch: report.student.batch,
-          reportDate: report.reportDate,
-          downloadUrl: finalUrl,
-        };
-      });
+  //       const finalUrl = isSecure
+  //         ? this.reportService.generateSignedUrl(publicId)
+  //         : report.reportCardUrl;
+  //       return {
+  //         name: report.student.name,
+  //         rollNo: report.student.rollNo,
+  //         batch: report.student.batch,
+  //         reportDate: report.reportDate,
+  //         downloadUrl: finalUrl,
+  //       };
+  //     });
 
-      res.status(200).json({
-        message: "All reports fetched successfully",
-        reports: formattedReports,
-      });
-    } catch (err) {
-      console.error("Error fetching reports:", err);
-      res.status(500).json({ message: "Failed to fetch reports" });
-    }
-  }
+  //     res.status(200).json({
+  //       message: "All reports fetched successfully",
+  //       reports: formattedReports,
+  //     });
+  //   } catch (err) {
+  //     console.error("Error fetching reports:", err);
+  //     res.status(500).json({ message: "Failed to fetch reports" });
+  //   }
+  // }
 }
 
 module.exports = PTMController;
