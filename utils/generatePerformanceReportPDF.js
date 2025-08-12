@@ -11,7 +11,7 @@ require("dotenv").config();
 
 const generatePerformanceReportPDF = async (data, filePath) => {
   console.log("data form generatePerformanceReportPDF", data);
-  console.log("data form generatePerformanceReportPDF", data.photo);
+  console.log("data.photo form generatePerformanceReportPDF", data.photo);
 
   const getImageAsBase64 = (imagePath) => {
     try {

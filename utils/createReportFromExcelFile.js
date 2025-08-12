@@ -280,10 +280,20 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
       return acc;
     }, []);
 
+
+    console.log("row[ROLL No]", row["ROLL NO"]);
+    console.log("row[ROLL No]", row["NAME"]);
+
+
+
+
+
     // const cloudinaryBase = `https://res.cloudinary.com/${cloud_name}/image/upload/PTM_Document/Student_Images`; // update as needed
     const imageName = `${(row["Name"] || row["NAME"] || "Unknown")
       .trim()
-      .replace(/\s+/g, "_")}_${(row["Roll No."] || row["ROLL NO"] || "").toString().trim()}`;
+      .replace(/\s+/g, "_")}_${(row["Roll No."] || row["ROLL NO"] || "").replace(/,/g, '').toString().trim()}`;
+
+
     const photoUrl = await findImageInCloudinaryFolder(imageName);
     // const photoUrl = `${cloudinaryBase}/${imageName}.jpg`; // or .png if applicable
 
