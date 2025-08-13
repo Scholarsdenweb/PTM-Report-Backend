@@ -31,14 +31,14 @@ router.post("/login", async (req, res) => {
     .cookie("token", token, {
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "Lax",
+      sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     })
   res
     .cookie("role", user.role, {
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "Lax",
+      sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     })
     .json({
