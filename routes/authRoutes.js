@@ -35,13 +35,13 @@ router.post("/login", async (req, res) => {
 
     // Set cookie
     res.cookie("token", token, {
-      httpOnly: process.env.NODE_ENV === "production",
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
     res.cookie("role", user.role, {
-      httpOnly: process.env.NODE_ENV === "production" ? true : false,
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production" ? true : false,
       sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000, // 1 day
@@ -77,7 +77,7 @@ router.get("/me", authMiddleware, async (req, res) => {
 
 router.post("/logout", (req, res) => {
   res.clearCookie("token", {
-    httpOnly: true,
+    httpOnly: false,
     sameSite: "none",
     secure: process.env.NODE_ENV === "production", // true in production
   });
