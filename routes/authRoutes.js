@@ -5,12 +5,19 @@ const jwt = require("jsonwebtoken");
 const router = express.Router();
 const User = require("../models/User");
 const authMiddleware = require("../middlewares/authMiddleware");
+require("dotenv").config();
+
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_key";
+const NODE_ENV = process.env.NODE_ENV;
+
+console.log("NOde_ENV", NODE_ENV);
 
 // POST /api/auth/login
 router.post("/login", async (req, res) => {
   console.log("email, password role", req.body);
+  console.log("NOde_ENV", NODE_ENV);
+
 
   const { email, password } = req.body;
 
@@ -27,13 +34,12 @@ router.post("/login", async (req, res) => {
   console.log("user", user);
 
   // Set cookie
-  res
-    .cookie("token", token, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "none",
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
-    })
+  res.cookie("token", token, {
+    httpOnly: process.env.NODE_ENV === "production",
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "none",
+    maxAge: 24 * 60 * 60 * 1000, // 1 day
+  });
   res
     .cookie("role", user.role, {
       httpOnly: false,
