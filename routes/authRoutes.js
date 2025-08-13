@@ -41,11 +41,15 @@ router.post("/login", async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
     res.cookie("role", user.role, {
-      httpOnly: process.env.NODE_ENV === "production",
-      secure: process.env.NODE_ENV === "production",
+      httpOnly: process.env.NODE_ENV === "production" ? true : false,
+      secure: process.env.NODE_ENV === "production" ? true : false,
       sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
+
+console.log("Set-Cookie Headers:", res.getHeaders()["set-cookie"]);
+
+
 
     return res.status(200).json({
       user: {
