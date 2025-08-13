@@ -7,7 +7,6 @@ const User = require("../models/User");
 const authMiddleware = require("../middlewares/authMiddleware");
 require("dotenv").config();
 
-
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_key";
 const NODE_ENV = process.env.NODE_ENV;
 
@@ -17,7 +16,6 @@ console.log("NOde_ENV", NODE_ENV);
 router.post("/login", async (req, res) => {
   console.log("email, password role", req.body);
   console.log("NOde_ENV", NODE_ENV);
-
 
   const { email, password } = req.body;
 
@@ -40,21 +38,21 @@ router.post("/login", async (req, res) => {
     sameSite: "none",
     maxAge: 24 * 60 * 60 * 1000, // 1 day
   });
-  res
-    .cookie("role", user.role, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "none",
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
-    })
-    .json({
-      user: {
-        id: user._id,
-        email: user.email,
-        username: user.username,
-        role: user.role,
-      },
-    });
+  res.cookie("role", user.role, {
+    httpOnly: process.env.NODE_ENV === "production",
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "none",
+    maxAge: 24 * 60 * 60 * 1000, // 1 day
+  });
+
+  return res.json({
+    user: {
+      id: user._id,
+      email: user.email,
+      username: user.username,
+      role: user.role,
+    },
+  });
 });
 
 router.get("/me", authMiddleware, async (req, res) => {
