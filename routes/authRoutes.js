@@ -36,17 +36,17 @@ router.post("/login", async (req, res) => {
     // Set cookie
     res.cookie("token", token, {
       httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
+      secure: false,
       sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
     res.cookie("role", user.role, {
       httpOnly: false,
-      secure: process.env.NODE_ENV === "production" ? true : false,
+      secure:  false,
       sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
-
+ 
 console.log("Set-Cookie Headers:", res.getHeaders()["set-cookie"]);
 
 
