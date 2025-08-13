@@ -14,6 +14,9 @@ console.log("NOde_ENV", NODE_ENV);
 
 // POST /api/auth/login
 router.post("/login", async (req, res) => {
+  try{
+
+
   console.log("email, password role", req.body);
   console.log("NOde_ENV", NODE_ENV);
 
@@ -45,7 +48,7 @@ router.post("/login", async (req, res) => {
     maxAge: 24 * 60 * 60 * 1000, // 1 day
   });
 
-  return res.json({
+  return res.status(200).json({
     user: {
       id: user._id,
       email: user.email,
@@ -53,6 +56,10 @@ router.post("/login", async (req, res) => {
       role: user.role,
     },
   });
+    }catch(error){
+      console.log("error ", error);
+      return res.status(500).json({ error: "Internal server error" })
+    }
 });
 
 router.get("/me", authMiddleware, async (req, res) => {
