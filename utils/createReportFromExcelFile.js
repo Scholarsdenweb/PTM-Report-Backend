@@ -261,6 +261,9 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
       const attention = row[`${key}_CA`];
       const homework = row[`${key}_HW`];
 
+
+    
+
       // Add feedback only if at least one field is present
       if (
         response !== undefined ||
@@ -279,6 +282,31 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
 
       return acc;
     }, []);
+
+
+
+    // Add "Total" feedback explicitly
+const totalResponse = row["Total_CR"];
+const totalDiscipline = row["Total_OD"]; // Adjust if Total_OD is used instead of Total_D
+const totalAttention = row["Total_CA"];
+const totalHomework = row["Total_HW"];
+
+if (
+  totalResponse !== undefined ||
+  totalDiscipline !== undefined ||
+  totalAttention !== undefined ||
+  totalHomework !== undefined
+) {
+  feedback.push({
+    subject: "Total",
+    response: totalResponse ?? "-",
+    discipline: totalDiscipline ?? "-",
+    attention: totalAttention ?? "-",
+    homework: totalHomework ?? "-",
+  });
+}
+
+
 
 
     console.log("row[ROLL No]", row["ROLL NO"]);
