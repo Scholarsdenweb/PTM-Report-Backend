@@ -2,64 +2,59 @@ const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
 const cookieParser = require("cookie-parser");
-
 const cors = require("cors");
+
 const PTMRoute = require("./routes/ptmRoutes.js");
 const userRoutes = require("./routes/userRoutes");
 const authRoutes = require("./routes/authRoutes");
 const batchRoutes = require("./routes/batchRoutes");
 const studentRoutes = require("./routes/student");
 
-
 require("dotenv").config();
 app.use(cookieParser());
 
-// app.use(
-//   cors({
-//     origin: "*",
-//     credentials: true
-//   })
-// );
+// List of allowed frontends for CORS
+const allowedOrigins = [
+  "http://localhost:5173", // local frontend
+  "http://localhost:3000", // another possible local frontend
+  "https://ptmreport.scholarsden.in" // your production frontend
+];
+
 app.use(cors({
-  origin: (origin, callback) => callback(null, origin),
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
 }));
 
-
-const port = process.env.PORT || 5003;
-
-
-
-// const allowedOrigin = 'http://localhost:5173';  // Your frontend URL
-
-// app.use((req, res, next) => {
-//   res.setHeader('Access-Control-Allow-Origin', '*'); 
-//   res.setHeader('Access-Control-Allow-Credentials', 'true');
-//   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS'); // allowed methods
-//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');  // allowed headers
-
-//   // Handle preflight requests
-//   if (req.method === 'OPTIONS') {
-//     return res.sendStatus(204);
-//   }
-
-//   next();
-// });
-
-
+// CORS headers for preflight/OPTIONS requests (recommended fallback)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  next();
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Must come after middleware
 app.use("/api/ptm", PTMRoute);
-// app.use("/api/faculty", facultyRoute);
 app.use("/api/users", userRoutes);
-app.use("/api/auth", authRoutes); // Login route
+app.use("/api/auth", authRoutes);
 app.use("/api/batches", batchRoutes);
 app.use("/api/students", studentRoutes);
-
-
 
 mongoose
   .connect(process.env.MONGODB_URI, {
@@ -68,6 +63,7 @@ mongoose
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error("MongoDB Connection Error:", err));
 
+const port = process.env.PORT || 5003;
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
