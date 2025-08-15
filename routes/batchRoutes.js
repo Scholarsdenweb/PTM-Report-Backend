@@ -122,6 +122,85 @@ router.get("/:batch/dates", async (req, res) => {
 //   }
 // });
 
+// router.get("/reports", async (req, res) => {
+//   try {
+//     const {
+//       batch,
+//       date,
+//       name = "",
+//       rollNo = "",
+//       page = 1,
+//       limit = 9,
+//     } = req.query;
+
+//     if (!batch || !date) {
+//       return res.status(400).json({ error: "Batch and date are required." });
+//     }
+
+//     const pageNumber = parseInt(page);
+//     const limitNumber = parseInt(limit);
+//     const skip = (pageNumber - 1) * limitNumber;
+
+//     // Build student filter
+//     const studentFilter = {
+//       batch,
+//       ...(name || rollNo
+//         ? {
+//             $and: [
+//               name ? { name: { $regex: name, $options: "i" } } : {},
+//               rollNo
+//                 ? { rollNo: { $regex: rollNo, $options: "i" } }
+//                 : {},
+//             ],
+//           }
+//         : {}),
+//     };
+
+//     const matchedStudents = await StudentModel.find(studentFilter).select(
+//       "_id"
+//     );
+
+//     if (matchedStudents.length === 0) {
+//       return res.json({
+//         reports: [],
+//         totalPages: 1,
+//         currentPage: 1,
+//         totalReports: 0,
+//       });
+//     }
+
+//     const startOfDay = new Date(date);
+//     startOfDay.setUTCHours(0, 0, 0, 0);
+//     const endOfDay = new Date(date);
+//     endOfDay.setUTCHours(23, 59, 59, 999);
+
+//     const reportFilter = {
+//       student: { $in: matchedStudents.map((s) => s._id) },
+//       reportDate: { $gte: startOfDay, $lte: endOfDay },
+//     };
+
+//     const totalReports = await ReportCardModel.countDocuments(reportFilter);
+
+//     const reports = await ReportCardModel.find(reportFilter)
+//       .populate("student")
+//       .sort({ "student.name": 1 })
+//       .skip(skip)
+//       .limit(limitNumber);
+
+
+//    return res.json({
+//       reports,
+//       totalPages: Math.ceil(totalReports / limitNumber) || 1,
+//       currentPage: pageNumber,
+//       totalReports,
+//     });
+//   } catch (err) {
+//     console.error("Error in /batches/reports:", err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
+
+
 router.get("/reports", async (req, res) => {
   try {
     const {
@@ -148,17 +227,14 @@ router.get("/reports", async (req, res) => {
         ? {
             $and: [
               name ? { name: { $regex: name, $options: "i" } } : {},
-              rollNo
-                ? { rollNo: { $regex: rollNo, $options: "i" } }
-                : {},
+              rollNo ? { rollNo: { $regex: rollNo, $options: "i" } } : {},
             ],
           }
         : {}),
     };
 
-    const matchedStudents = await StudentModel.find(studentFilter).select(
-      "_id"
-    );
+    // Find only IDs of matched students
+    const matchedStudents = await StudentModel.find(studentFilter).select("_id");
 
     if (matchedStudents.length === 0) {
       return res.json({
@@ -179,16 +255,27 @@ router.get("/reports", async (req, res) => {
       reportDate: { $gte: startOfDay, $lte: endOfDay },
     };
 
+    // Total count for pagination
     const totalReports = await ReportCardModel.countDocuments(reportFilter);
 
-    const reports = await ReportCardModel.find(reportFilter)
-      .populate("student")
-      .sort({ "student.name": 1 })
-      .skip(skip)
-      .limit(limitNumber);
+    // Aggregation pipeline (with $lookup to populate student)
+    const reports = await ReportCardModel.aggregate([
+      { $match: reportFilter },
+      {
+        $lookup: {
+          from: "students", // MongoDB collection name for StudentModel
+          localField: "student",
+          foreignField: "_id",
+          as: "student",
+        },
+      },
+      { $unwind: "$student" },
+      { $sort: { "student.name": 1, _id: 1 } }, // stable sort
+      { $skip: skip },
+      { $limit: limitNumber },
+    ]);
 
-
-   return res.json({
+    return res.json({
       reports,
       totalPages: Math.ceil(totalReports / limitNumber) || 1,
       currentPage: pageNumber,
@@ -199,6 +286,7 @@ router.get("/reports", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
 
 
 // router.get("/reports/download", async (req, res) => {

@@ -96,6 +96,46 @@ const stream = require("stream");
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// const Student = require("../models/Student");
+const Result = require("../models/ReportCard");
+
+
+router.delete("/delete/:rollNo", async (req, res) => {
+  try {
+    const { rollNo } = req.params;
+
+    // Find the student
+    const student = await Student.findOne({ rollNo });
+    if (!student) {
+      return res.status(404).json({ message: `Student with rollNo ${rollNo} not found.` });
+    }
+
+    // Delete all report cards for that student
+    await Result.deleteMany({ student: student._id });
+
+    // Delete the student
+    await Student.deleteOne({ _id: student._id });
+
+    res.status(200).json({ message: `Student ${rollNo} and their reports deleted successfully.` });
+  } catch (error) {
+    console.error("Error deleting student and reports:", error);
+    res.status(500).json({ message: "Failed to delete student and reports", error: error.message });
+  }
+});
+
+
+router.delete("/delete-all", async (req, res) => {
+  try {
+    await Result.deleteMany({});
+    await Student.deleteMany({});
+    
+    res.status(200).json({ message: "All reports and students deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting all data:", error);
+    res.status(500).json({ message: "Failed to delete all data", error: error.message });
+  }
+});
+
 router.post(
   "/bulk-upload-photos",
   upload.array("photos", 100),

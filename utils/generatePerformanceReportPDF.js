@@ -15,7 +15,6 @@ const generatePerformanceReportPDF = async (data, filePath) => {
 
   const getImageAsBase64 = (imagePath) => {
     try {
-
       console.log("get image path getImageAsBase64 ", imagePath);
       const logoPath = path.resolve(__dirname, imagePath);
       const logoBase64 = fs.readFileSync(logoPath, { encoding: "base64" });
@@ -26,9 +25,10 @@ const generatePerformanceReportPDF = async (data, filePath) => {
     }
   };
 
-
-
   console.log("data form generatePerformanceReportPDF", data);
+    console.log("Student Data stringify: ", JSON.stringify(data.subjectWiseData));
+    console.log("Student Data: ", data.subjectWiseData);
+
 
   // 1. Get all available subjects from jeeMain data
   const allPossibleSubjects = [
@@ -368,7 +368,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
         font-size: 32px;
         font-weight: bold;
         padding-top: ${jeeMainRows.length > 3 ? "10px" : "30px"};
-        margin-bottom : ${jeeMainRows.length > 3 ? "5px" : "20px"};;
+        margin-bottom : ${jeeMainRows.length > 3 ? "5px" : "10px"};;
       }
 
       .section-title span {
@@ -437,6 +437,7 @@ table {
   .table-container {
     page-break-inside: avoid;
     break-inside: avoid;
+    margin-top: ${data.jeeAdv?.length > 0 ? "30px" : "0px"};
     display : flex;
     flex-direction : column;
     gap : ${jeeMainRows.length > 3 ? "20px" : "30px"};
@@ -487,7 +488,7 @@ table {
 
       <div class="student-info">
         <div class="photo-section">
-          <img src="${data.photo.url}" alt="Student Photo" />
+          <img src="${data?.photo?.url || getImageAsBase64(data.photo)}" alt="Student Photo" />
           <p><strong>Name:</strong> ${data.name}</p>
           <p><strong>Roll No.:</strong> ${data.rollNo}</p>
         </div>
@@ -521,7 +522,7 @@ ${heading}
 
     <div class="container" style="padding: 50px 0 0 0;">
  ${showTable}
-<div class="table-container">
+<div class="table-container ">
       <div class="section-title"><span>Attendance Report</span></div>
       <table class="marks-table">
         <thead>
@@ -558,83 +559,95 @@ ${heading}
     </div>
     </div>
 
-    <script>
-              window.onload = () => {
-                const labels = ${JSON.stringify(data.subjectWiseData.labels)};
-                const phyData = ${JSON.stringify(data.subjectWiseData.phy)};
-                const chemData = ${JSON.stringify(data.subjectWiseData.chem)};
-                const mathData = ${JSON.stringify(data.subjectWiseData.math)};
 
-                new Chart(document.getElementById("barChart").getContext("2d"), {
-                  type: "bar",
-                  data: {
-                    labels,
-                    datasets: [
-                      { label: "Physics", data: phyData, backgroundColor: "#2f72da" },
-                      { label: "Chemistry", data: chemData, backgroundColor: "#c61d23" },
-                      { label: "Maths", data: mathData, backgroundColor: "#86b43b" },
-                    ],
-                  },
-               options: {
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const subjectWiseData = ${JSON.stringify(data.subjectWiseData)};
+  const labels = subjectWiseData.labels;
+
+  const colorMap = {
+    phy: "#2f72da",
+    chem: "#c61d23",
+    math: "#86b43b",
+    bio: "#ff9900",
+    eng: "#8e44ad",
+    sst: "#27ae60"
+  };
+
+  const excludeKeys = [
+    "labels", "Total", "Total(100)", "abs",
+    "Phy(10)", "Chem(10)", "Bio(10)", "Maths(25)", "Eng(15)", "SST(30)"
+  ];
+
+  const datasets = Object.keys(subjectWiseData)
+    .filter(key => !excludeKeys.includes(key) && subjectWiseData[key].some(v => v ))
+    .map(key => ({
+      label: getSubjectName(key),
+      data: subjectWiseData[key].map(v => v && v !== "ABS" ? Number(v) : null),
+      backgroundColor: colorMap[key.toLowerCase()],
+      borderColor: colorMap[key.toLowerCase()] ,
+      fill: false,
+      tension: 0.3
+    }));
+
+  if (datasets.length) {
+    const maxScore = Math.max(...datasets.flatMap(ds => ds.data.filter(v => v !== null)));
+
+    new Chart(document.getElementById("barChart").getContext("2d"), {
+      type: "bar",
+      data: { labels, datasets },
+      options: {
         responsive: true,
-        scales: {
-          y: {
-            min: 0,
-            max: 100,
-            ticks: {
-              stepSize: 10,
-            },
-          },
-        },
+        scales: { y: { min: 0, max: maxScore + 10, ticks: { stepSize: 10 } } }
       }
+    });
 
-                });
+    new Chart(document.getElementById("lineChart").getContext("2d"), {
+      type: "line",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true, max: maxScore + 10, ticks: { stepSize: 10 } } }
+      }
+    });
+  }
 
-                new Chart(document.getElementById("lineChart").getContext("2d"), {
-                  type: "line",
-                  data: {
-                    labels,
-                    datasets: [
-                      {
-                        label: "Physics",
-                        data: phyData,
-                        borderColor: "#2f72da",
-                        backgroundColor: "#2f72da",
-                        fill: false,
-                        tension: 0.3,
-                      },
-                      {
-                        label: "Chemistry",
-                        data: chemData,
-                        borderColor: "#c61d23",
-                        backgroundColor: "#c61d23",
-                        fill: false,
-                        tension: 0.3,
-                      },
-                      {
-                        label: "Maths",
-                        data: mathData,
-                        borderColor: "#86b43b",
-                        backgroundColor: "#86b43b",
-                        fill: false,
-                        tension: 0.3,
-                      },
-                    ],
-                  },
-                  options: {
-                    responsive: true,
-                    scales: {
-                      y: { beginAtZero: true, max: 100, ticks: {
-              stepSize: 10,
-            }, },
-                    },
-                  },
-                });
-              };
-    </script>
+  function getSubjectName(key) {
+    const names = {
+      phy: "Physics", chem: "Chemistry", math: "Maths", bio: "Biology",
+      eng: "English", sst: "SST"
+    };
+    return names[key.toLowerCase()] || key;
+  }
+
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   </body>
 </html>`;
-let browser = null;
+  let browser = null;
   try {
     if (process.env.NODE_ENV === "production") {
       // Configure the version based on your package.json (for your future usage).
@@ -663,11 +676,85 @@ let browser = null;
     await page.addScriptTag({ url: "https://cdn.jsdelivr.net/npm/chart.js" });
 
     await page.pdf({ path: filePath, format: "A4", printBackground: true });
-        await browser.close();
-
+    await browser.close();
   } catch (error) {
     console.log("error for genaratePerformanceReeportPDF", error);
   }
 };
 
 module.exports = generatePerformanceReportPDF;
+
+// <script>
+//           window.onload = () => {
+//             const labels = ${JSON.stringify(data.subjectWiseData.labels)};
+//             const phyData = ${JSON.stringify(data.subjectWiseData.phy)};
+//             const chemData = ${JSON.stringify(data.subjectWiseData.chem)};
+//             const mathData = ${JSON.stringify(data.subjectWiseData.math)};
+
+//             new Chart(document.getElementById("barChart").getContext("2d"), {
+//               type: "bar",
+//               data: {
+//                 labels,
+//                 datasets: [
+//                   { label: "Physics", data: phyData, backgroundColor: "#2f72da" },
+//                   { label: "Chemistry", data: chemData, backgroundColor: "#c61d23" },
+//                   { label: "Maths", data: mathData, backgroundColor: "#86b43b" },
+//                 ],
+//               },
+//            options: {
+//     responsive: true,
+//     scales: {
+//       y: {
+//         min: 0,
+//         max: 100,
+//         ticks: {
+//           stepSize: 10,
+//         },
+//       },
+//     },
+//   }
+
+//             });
+
+//             new Chart(document.getElementById("lineChart").getContext("2d"), {
+//               type: "line",
+//               data: {
+//                 labels,
+//                 datasets: [
+//                   {
+//                     label: "Physics",
+//                     data: phyData,
+//                     borderColor: "#2f72da",
+//                     backgroundColor: "#2f72da",
+//                     fill: false,
+//                     tension: 0.3,
+//                   },
+//                   {
+//                     label: "Chemistry",
+//                     data: chemData,
+//                     borderColor: "#c61d23",
+//                     backgroundColor: "#c61d23",
+//                     fill: false,
+//                     tension: 0.3,
+//                   },
+//                   {
+//                     label: "Maths",
+//                     data: mathData,
+//                     borderColor: "#86b43b",
+//                     backgroundColor: "#86b43b",
+//                     fill: false,
+//                     tension: 0.3,
+//                   },
+//                 ],
+//               },
+//               options: {
+//                 responsive: true,
+//                 scales: {
+//                   y: { beginAtZero: true, max: 100, ticks: {
+//           stepSize: 10,
+//         }, },
+//                 },
+//               },
+//             });
+//           };
+// </script>

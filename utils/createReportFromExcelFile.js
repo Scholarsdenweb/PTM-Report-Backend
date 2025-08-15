@@ -6,7 +6,9 @@ const generatePerformanceReportPDF = require("./generatePerformanceReportPDF");
 require("dotenv").config();
 
 // const cloud_name = process.env.CLOUDINARY_CLOUD_NAME;
-const  { findImageInCloudinaryFolder } =  require("./cloudinary/cloudinaryFunctions.js");
+const {
+  findImageInCloudinaryFolder,
+} = require("./cloudinary/cloudinaryFunctions.js");
 
 const dayjs = require("dayjs");
 const weekday = require("dayjs/plugin/weekday");
@@ -32,7 +34,7 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
   const reportResults = [];
 
   // Extract student data row by row
-  const parseReportData = async(row) => {
+  const parseReportData = async (row) => {
     console.log("row from parseReportData", row);
 
     const attendance = [];
@@ -49,23 +51,18 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
 
     // Step 2: Build the attendance array
     monthSet.forEach((month) => {
-      const present = Number(
-        row[`Attendance_${month}_P`] || row[`Attendance_${month}__P`] || 0
-      );
-
-      const absent = Number(
-        row[`Attendance_${month}_A`] || row[`Attendance_${month}__A`] || 0
-      );
-
+      const present =
+        row[`Attendance_${month}_P`] || row[`Attendance_${month}__P`] || 0;
+      const absent =
+        row[`Attendance_${month}_A`] || row[`Attendance_${month}__A`] || "-";
       const percent =
         row[`Attendance_${month}_Per`] ||
         row[`Attendance_${month}_PER`] ||
-        row[`Attendance_${month}_per`] ||
-        0;
+        row[`Attendance_${month}_per`];
 
       attendance.push({
         month,
-        held: present + absent,
+        held: row[`Attendance_${month}`],
         present,
         absent,
         percent: `${percent}`,
@@ -96,7 +93,7 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
           .filter(
             (k) =>
               k.startsWith("Result_") &&
-              /_Phy|_Chem|_Maths|_Bio|_Abs|_Tot|_Total|_Eng|_Phy(10)|_Chem(10)|_Bio(10)|_Math(25)|_Eng(15)|_SST(30)|_Total(100)|_Total|_SST/.test(
+              /_Phy|_Chem|_Maths|Math|_Bio|_Abs|_Tot|_Total|_Eng|_Phy(10)|_Chem(10)|_Bio(10)|_Math(25)|_Eng(15)|_SST(30)|_Total(100)|_Total|_SST/.test(
                 k
               )
           )
@@ -111,7 +108,8 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
       const subjectsMap = {
         phy: `Result_${date}_Phy`,
         chem: `Result_${date}_Chem`,
-        math: `Result_${date}_Maths`,
+        maths: `Result_${date}_Maths`,
+        math: `Result_${date}_Math`,
         bio: `Result_${date}_Bio`,
         abs: `Result_${date}_Abs`,
         "Phy(10)": `Result_${date}_Phy(10)`,
@@ -139,7 +137,10 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
         const rankKey = `Result_${date}`;
         const totalKey = `Result_${date}_Total`;
         const altTotalKey = `Result_${date}_Tot`;
-        const highestKey = `Result_${date}_Highest Marks`;
+        const highestKey = row[`Result_${date}_High`]
+          ? `Result_${date}_High`
+          : `Result_${date}_Highest Marks`;
+        // const highestKey = `Result_${date}_High` || `Result_${date}_Highest Marks`;
 
         entry.rank = row[rankKey] || "-";
         entry.total = row[totalKey] || row[altTotalKey] || 0;
@@ -163,22 +164,37 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
 
     advDates.forEach((date) => {
       const rankKey = `AdvancedResult_${date}`;
+      // const rankKey = `AdvancedResult_${date}`;
       const paper1 = {
-        phy: row[`AdvancedResult_${date}_P1`] ?? 0,
-        chem: row[`AdvancedResult_${date}_C1`] ?? 0,
-        maths: row[`AdvancedResult_${date}_M1`] ?? 0,
-        total: row[`AdvancedResult_${date}_T1`] ?? 0,
+        phy: row[`AdvancedResult_${date}_Paper 1_Phy`] ?? 0,
+        chem: row[`AdvancedResult_${date}_Paper 1_Chem`] ?? 0,
+        maths: row[`AdvancedResult_${date}_Paper 1_Math`] ?? 0,
+        total: row[`AdvancedResult_${date}_Paper 1_Total`] ?? 0,
       };
+      // const paper1 = {
+      //   phy: row[`AdvancedResult_${date}_P1`] ?? 0,
+      //   chem: row[`AdvancedResult_${date}_C1`] ?? 0,
+      //   maths: row[`AdvancedResult_${date}_M1`] ?? 0,
+      //   total: row[`AdvancedResult_${date}_T1`] ?? 0,
+      // };
 
       const paper2 = {
-        phy: row[`AdvancedResult_${date}_P2`] ?? 0,
-        chem: row[`AdvancedResult_${date}_C2`] ?? 0,
-        maths: row[`AdvancedResult_${date}_M2`] ?? 0,
-        total: row[`AdvancedResult_${date}_T2`] ?? 0,
+        phy: row[`AdvancedResult_${date}_Paper 2_Phy`] ?? 0,
+        chem: row[`AdvancedResult_${date}_Paper 2_Chem`] ?? 0,
+        maths: row[`AdvancedResult_${date}_Paper 2_Math`] ?? 0,
+        total: row[`AdvancedResult_${date}_Paper 2_Total`] ?? 0,
       };
+      // const paper2 = {
+      //   phy: row[`AdvancedResult_${date}_P2`] ?? 0,
+      //   chem: row[`AdvancedResult_${date}_C2`] ?? 0,
+      //   maths: row[`AdvancedResult_${date}_M2`] ?? 0,
+      //   total: row[`AdvancedResult_${date}_T2`] ?? 0,
+      // };
 
-      const total = row[`AdvancedResult_${date}_GT`] ?? 0;
-      const highest = row[`AdvancedResult_${date}_High`] ?? "";
+      const total = row[`AdvancedResult_${date}_Grand Total`] ?? 0;
+      const highest =
+        row[`AdvancedResult_${date}_High`] ||
+        row[`Result_${date}_Highest Marks`];
 
       // Only push if at least one subject or total is present
       if (
@@ -221,7 +237,9 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
       };
 
       const maths = row[`SubjectiveResult_${date}_Math(20)`] ?? "";
-      const highest = row[`SubjectiveResult_${date}_High`] ?? "";
+      const highest =
+        row[`SubjectiveResult_${date}_High`] ||
+        row[`SubjectiveResult_${date}_Highest Marks`];
 
       // Only push if at least one subject or total is present
       if (
@@ -242,10 +260,16 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
     const subjects = [
       { key: "Physics", label: "Physics" },
       { key: "Phy.Chem.", label: "Physical Chemistry" },
+      { key: "Physical Chemistry", label: "Physical Chemistry" },
+      { key: "Organic Chemistry", label: "Organic Chemistry" },
       { key: "Inorg.Chem.", label: "Inorganic Chemistry" },
       { key: "Mathematics", label: "Mathematics" },
+      { key: "Math", label: "Maths" }, // Added variation if needed
       { key: "Maths", label: "Maths" }, // Added variation if needed
       { key: "Biology", label: "Biology" },
+      { key: "Botany", label: "Botany" },
+      { key: "Zoology", label: "Zoology" },
+
       { key: "Chemistry", label: "Chemistry" },
       { key: "Geography+Economics", label: "Geography + Economics" },
       { key: "Economics", label: "Economics" },
@@ -257,12 +281,9 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
 
     const feedback = subjects.reduce((acc, { key, label }) => {
       const response = row[`${key}_CR`];
-      const discipline = row[`${key}_D`];
+      const discipline = row[`${key}_OD`];
       const attention = row[`${key}_CA`];
       const homework = row[`${key}_HW`];
-
-
-    
 
       // Add feedback only if at least one field is present
       if (
@@ -283,68 +304,31 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
       return acc;
     }, []);
 
-
-
-    // Add "Total" feedback explicitly
-const totalResponse = row["Total_CR"];
-const totalDiscipline = row["Total_OD"]; // Adjust if Total_OD is used instead of Total_D
-const totalAttention = row["Total_CA"];
-const totalHomework = row["Total_HW"];
-
-if (
-  totalResponse !== undefined ||
-  totalDiscipline !== undefined ||
-  totalAttention !== undefined ||
-  totalHomework !== undefined
-) {
-  feedback.push({
-    subject: "Total",
-    response: totalResponse ?? "-",
-    discipline: totalDiscipline ?? "-",
-    attention: totalAttention ?? "-",
-    homework: totalHomework ?? "-",
-  });
-}
-
-
-
-
-    console.log("row[ROLL No]", row["ROLL NO"]);
-    console.log("row[ROLL No]", row["NAME"]);
-
-
-
-
-
     // const cloudinaryBase = `https://res.cloudinary.com/${cloud_name}/image/upload/PTM_Document/Student_Images`; // update as needed
     const imageName = `${(row["Name"] || row["NAME"] || "Unknown")
       .trim()
-      .replace(/\s+/g, "_")}_${(row["Roll No."] || row["ROLL NO"] || "").replace(/,/g, '').toString().trim()}`;
-
+      .replace(/\s+/g, "_")}_${(row["Roll No"] || row["ROLL NO"] || "")
+      .replace(/,/g, "")
+      .toString()
+      .trim()}`;
 
     const photoUrl = await findImageInCloudinaryFolder(imageName);
     // const photoUrl = `${cloudinaryBase}/${imageName}.jpg`; // or .png if applicable
 
     const formatted = dayjs(ptmDate).format("DD-MM-YY dddd"); // 'dddd' = full day name
 
-    console.log(
-      "photoUrl imageUrl cloudinaryBase",
-      photoUrl,
-      imageName
-    );
+    console.log("photoUrl imageUrl cloudinaryBase", photoUrl, imageName);
 
     return {
       name: row["NAME"] || row["Name"] || "Unnamed",
-      rollNo: (row["ROLL NO"] || row["Roll No."] || "Unknown").replace(
-        /,/g,
-        ""
-      ),
+      rollNo: (row["ROLL NO"] || row["Roll No"] || "Unknown").replace(/,/g, ""),
       batch: row["BATCH"] || row["Batch"] || "",
       motherName: row["M_N"] || row["Mother Name"] || "",
       fatherName: row["F_N"] || row["Father Name"] || "",
-      batchStrength: row["Str"],
-      // photo : `../photographs/${row["Name"]}_${row["Roll No."]}`,
-      photo: photoUrl,
+      batchStrength: row["Strength"],
+      // photo : `../photographs/${row["Name"]}_${row["Roll No"]}`,
+      // photo: "../assets/profileImg.png",
+      photo: photoUrl ? photoUrl : "../assets/profileImg.png",
       ptmDate: formatted,
       // photo: "../assets/student.png",
       headerImage: "../assets/headerImage.png",
@@ -361,32 +345,34 @@ if (
 
   // Generate PDFs
 
-
-
   const rollNoCounts = new Map();
 
-// Count occurrences of each Roll No.
-for (const row of rows) {
-  const rollNo = row["Roll No."];
-  if (!rollNo) continue;
+  // Count occurrences of each Roll No
+  for (const row of rows) {
+    const rollNo = row["Roll No"];
+    if (!rollNo) continue;
 
-  const count = rollNoCounts.get(rollNo) || 0;
-  rollNoCounts.set(rollNo, count + 1);
-}
+    const count = rollNoCounts.get(rollNo) || 0;
+    rollNoCounts.set(rollNo, count + 1);
+  }
 
-// Detect duplicates
-const duplicateRollNos = [...rollNoCounts.entries()]
-  .filter(([_, count]) => count > 1)
-  .map(([rollNo]) => rollNo);
+  // Detect duplicates
+  const duplicateRollNos = [...rollNoCounts.entries()]
+    .filter(([_, count]) => count > 1)
+    .map(([rollNo]) => rollNo);
 
-if (duplicateRollNos.length > 0) {
-  throw new Error(`❌ Duplicate Roll No. found: ${duplicateRollNos.join(", ")}`);
-}
-
+  if (duplicateRollNos.length > 0) {
+    throw new Error(
+      `❌ Duplicate Roll No found: ${duplicateRollNos.join(", ")}`
+    );
+  }
 
   console.log("Generating reports...");
   for (const row of rows) {
-    const { exists, report } = await checkIfReportCardExists(row["Roll No."], ptmDate);
+    const { exists, report } = await checkIfReportCardExists(
+      row["Roll No"],
+      ptmDate
+    );
 
     console.log("exists, report", exists, report);
 
