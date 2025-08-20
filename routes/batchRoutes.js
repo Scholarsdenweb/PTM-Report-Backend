@@ -11,6 +11,7 @@ const archiver = require("archiver");
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
+const Student = require("../models/Student");
 
 // GET /batches
 router.get("/", async (req, res) => {
@@ -365,9 +366,6 @@ router.get("/reports", async (req, res) => {
 //   }
 // });
 
-
-
-
 // router.get("/reports/download", async (req, res) => {
 //   try {
 //     const { batch, date, name = "", rollNo = "" } = req.query;
@@ -466,7 +464,6 @@ router.get("/reports", async (req, res) => {
 //   }
 // });
 
-
 // router.get("/reports/download", async (req, res) => {
 //   try {
 //     const { batch, date, name = "", rollNo = "" } = req.query;
@@ -564,7 +561,6 @@ router.get("/reports", async (req, res) => {
 //     }
 //   }
 // });
-
 
 router.get("/admin/reports/download", async (req, res) => {
   const { batch, date } = req.query;
@@ -582,36 +578,37 @@ router.get("/admin/reports/download", async (req, res) => {
     dateEnd.setDate(dateEnd.getDate() + 1);
 
     console.log("Searching reports from", dateStart, "to", dateEnd);
-const reports = await ReportCardModel.aggregate([
-  {
-    $match: {
-      reportDate: { $gte: dateStart, $lt: dateEnd },
-    },
-  },
-  {
-    $lookup: {
-      from: "students", // collection name (usually lowercase plural of model)
-      localField: "student",
-      foreignField: "_id",
-      as: "student",
-    },
-  },
-  {
-    $unwind: "$student",
-  },
-  {
-    $match: {
-      "student.batch": batch,
-    },
-  },
-]);
-
+    const reports = await ReportCardModel.aggregate([
+      {
+        $match: {
+          reportDate: { $gte: dateStart, $lt: dateEnd },
+        },
+      },
+      {
+        $lookup: {
+          from: "students", // collection name (usually lowercase plural of model)
+          localField: "student",
+          foreignField: "_id",
+          as: "student",
+        },
+      },
+      {
+        $unwind: "$student",
+      },
+      {
+        $match: {
+          "student.batch": batch,
+        },
+      },
+    ]);
 
     console.log("Found reports:", reports.length);
 
     if (!reports.length) {
       console.log("No reports found for given date and batch");
-      return res.status(404).json({ error: "No reports found for given date and batch." });
+      return res
+        .status(404)
+        .json({ error: "No reports found for given date and batch." });
     }
 
     res.attachment(`PTM_Reports_${batch}_${date}.zip`);
@@ -626,29 +623,41 @@ const reports = await ReportCardModel.aggregate([
 
     for (let i = 0; i < reports.length; i++) {
       const report = reports[i];
-      console.log(`Fetching report [${i + 1}/${reports.length}] for`, report.student.name, report.student.rollNo);
+      console.log(
+        `Fetching report [${i + 1}/${reports.length}] for`,
+        report.student.name,
+        report.student.rollNo
+      );
 
       try {
-        const response = await axios.get(report.secure_url, { responseType: "arraybuffer" });
+        const response = await axios.get(report.secure_url, {
+          responseType: "arraybuffer",
+        });
         const fileName = `${report.student.name}_${report.student.rollNo}.pdf`;
         archive.append(response.data, { name: fileName });
         console.log(`Appended ${fileName} to archive`);
       } catch (downloadErr) {
-        console.error(`Failed to fetch PDF for ${report.student.name} (${report.student.rollNo}):`, downloadErr.message);
+        console.error(
+          `Failed to fetch PDF for ${report.student.name} (${report.student.rollNo}):`,
+          downloadErr.message
+        );
       }
     }
 
     archive.finalize();
     console.log("Archive finalized and sent to client");
-
   } catch (error) {
     console.error("Download error:", error.message);
     res.status(500).json({ error: "Failed to download reports." });
   }
 });
 
+router.post("/fetchDataByRollNo", async (req, res) => {
 
+  const {rollNo } = req.body;
+  const findStudentDetails = await Student.find({rollNo});
+  console.log("FIndStudentDetails", findStudentDetails);
 
-
+});
 
 module.exports = router;

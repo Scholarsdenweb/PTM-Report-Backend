@@ -20,14 +20,19 @@ class PTMController {
 
   async handleUpload(req, res) {
     try {
+      console.log("req.file.path", req.file.path);
       const filePath = req?.file?.path; // Excel file path from multer
       const { ptmDate } = req.body;
 
       console.log("filePath", filePath, ptmDate);
       const reportDataArray = await createReportFromExcelFile(
         filePath,
-        ptmDate
+        ptmDate,
+        "generate",
       ); // returns [{ studentData, reportPath }]
+
+
+      console.log("reportDateArray from handleArray", reportDataArray)
 
       const results = [];
 
@@ -89,7 +94,7 @@ class PTMController {
       });
     } catch (err) {
       console.error("Error in PTMController:", err);
-      res.status(500).json({  err });
+      res.status(500).json({ err });
     }
   }
 
@@ -159,6 +164,81 @@ class PTMController {
   //     res.status(500).json({ message: "Failed to fetch reports" });
   //   }
   // }
+
+  async regenerate(req, res) {
+    try {
+      const filePath = req?.file?.path; // Excel file path from multer
+      const { ptmDate } = req.body;
+
+      console.log("filePath", filePath, ptmDate);
+      const reportDataArray = await createReportFromExcelFile(
+        filePath,
+        ptmDate
+      ); // returns [{ studentData, reportPath }]
+
+      const results = [];
+
+      for (const data of reportDataArray) {
+        const { studentData, reportPath } = data;
+
+        const uploadedUrl = await this.reportService.uploadReport(
+          reportPath,
+          studentData.name,
+          studentData.rollNo
+        );
+
+        // Upsert student
+        let student = await StudentModel.findOneAndUpdate(
+          { rollNo: studentData.rollNo },
+          {
+            name: studentData.name,
+            fatherName: studentData.fatherName,
+            motherName: studentData.motherName,
+            batch: studentData.batch,
+            fatherContactNumber:
+              studentData.fatherContactNumber || studentData.FATHER_CONTACT_NO,
+            motherContactNumber:
+              studentData.motherContactNumber || studentData.MOTHER_CONTACT_NO,
+          },
+          { upsert: true, new: true }
+        );
+
+        // Create report document
+        await ReportCardModel.create({
+          student: student._id,
+          public_id: uploadedUrl.public_id,
+          secure_url: uploadedUrl.secure_url,
+          reportDate: ptmDate,
+        });
+
+        results.push({
+          name: studentData.name,
+          rollNo: studentData.rollNo,
+          cloudinaryUrl: uploadedUrl,
+        });
+
+        await removeFileFormServer(reportPath);
+        // const mobile = studentData.FATHER_CONTACT_NO || studentData.MOTHER_CONTACT_NO;
+        // const name = studentData.NAME;
+
+        // if (mobile) {
+        //   await this.whatsAppService.sendReport(mobile, name, uploadedUrl);
+        // }
+      }
+
+      await removeFileFormServer(filePath);
+
+      console.log("result from PTMController", results);
+
+      res.status(200).json({
+        message: "Reports generated successfully",
+        results,
+      });
+    } catch (err) {
+      console.error("Error in PTMController:", err);
+      res.status(500).json({ err });
+    }
+  }
 }
 
 module.exports = PTMController;

@@ -19,14 +19,21 @@ require("dayjs/locale/en");
 dayjs.extend(weekday);
 dayjs.extend(localizedFormat);
 
-const createReportFromExcelFile = async (filePath, ptmDate) => {
+const createReportFromExcelFile = async (filePath, ptmDate, type) => {
+  console.log("filePath, ptmDate, type", filePath, ptmDate, type);
   const workbook = xlsx.readFile(filePath, { raw: true });
+
+  console.log("sheet from createReportFromExcelFile", workbook);
+
   // const workbook = xlsx.readFile(filePath, { raw: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  console.log("sheet from createReportFromExcelFile", sheet);
   const rows = xlsx.utils.sheet_to_json(sheet, {
     raw: false,
     defval: "",
   });
+
+  console.log("sheet from createReportFromExcelFile", rows);
 
   const outputDir = path.join(__dirname, "reports");
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
@@ -376,9 +383,11 @@ const createReportFromExcelFile = async (filePath, ptmDate) => {
 
     console.log("exists, report", exists, report);
 
-    if (exists) {
+    if (exists && type === "generate") {
       console.log("exists from parseReportData", exists);
       continue;
+    } else {
+      console.log("EXISTS REPORT", exists, report);
     }
     const studentData = await parseReportData(row);
     const safeName = (studentData.name || "Student").replace(/\s+/g, "_");
