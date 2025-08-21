@@ -22,13 +22,13 @@ class PTMController {
     try {
       console.log("req.file.path", req.file.path);
       const filePath = req?.file?.path; // Excel file path from multer
-      const { ptmDate } = req.body;
+      const { ptmDate, type } = req.body;
 
       console.log("filePath", filePath, ptmDate);
       const reportDataArray = await createReportFromExcelFile(
         filePath,
         ptmDate,
-        "generate",
+        type
       ); // returns [{ studentData, reportPath }]
 
 

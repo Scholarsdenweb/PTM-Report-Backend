@@ -5,12 +5,14 @@ const Student = require("../models/Student.js");
 const dayjs = require("dayjs");
 
 async function checkIfReportCardExists(rollNo, ptmDate) {
+  console.log("rollNo ptmDate", rollNo, ptmDate);
   const student = await Student.findOne({ rollNo });
 
   if (!student) {
     return { exists: false, reason: "Student not found" };
   }
 
+  console.log("Student from checkIfReportCardExist", student);
   const startOfDay = dayjs(ptmDate).startOf("day").toDate();
   const endOfDay = dayjs(ptmDate).endOf("day").toDate();
 
@@ -21,6 +23,7 @@ async function checkIfReportCardExists(rollNo, ptmDate) {
       $lte: endOfDay,
     },
   });
+  console.log("reportExists from checkIfReportCardExist", reportExists);
 
   if (reportExists) {
     return { exists: true, report: reportExists };

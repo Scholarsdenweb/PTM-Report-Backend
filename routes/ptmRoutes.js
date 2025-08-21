@@ -8,7 +8,7 @@ const isAdmin = require('../middlewares/isAdmin');
 
 
 router.post('/upload', upload.single("csvFile"), ptmController.handleUpload.bind(ptmController));
-// router.post('/regenrate', upload.single("csvFile"), ptmController.handleUpload.bind(ptmController));
+router.post('/regenrate', upload.single("csvFile"), ptmController.handleUpload.bind(ptmController));
 
 router.get("/admin/reports", authMiddleware, isAdmin, ptmController.getAllReports.bind(ptmController));
 

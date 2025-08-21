@@ -14,6 +14,7 @@ const dayjs = require("dayjs");
 const weekday = require("dayjs/plugin/weekday");
 const localizedFormat = require("dayjs/plugin/localizedFormat");
 const { checkIfReportCardExists } = require("./checkIfReportCardExists.js");
+const { deleteOldAndGenerateNew } = require("./deleteOldAndGenerateNew.js");
 require("dayjs/locale/en");
 
 dayjs.extend(weekday);
@@ -376,8 +377,10 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
 
   console.log("Generating reports...");
   for (const row of rows) {
+        const studentData = await parseReportData(row);
+
     const { exists, report } = await checkIfReportCardExists(
-      row["Roll No"],
+      row["Roll No"].replace(/,/g, ""),
       ptmDate
     );
 
@@ -386,10 +389,10 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
     if (exists && type === "generate") {
       console.log("exists from parseReportData", exists);
       continue;
-    } else {
+    } else if (exists && type === "regenerate") {
       console.log("EXISTS REPORT", exists, report);
+      const data = await deleteOldAndGenerateNew(ptmDate, studentData.rollNo);
     }
-    const studentData = await parseReportData(row);
     const safeName = (studentData.name || "Student").replace(/\s+/g, "_");
     const fileName = `${safeName}_${studentData.rollNo}.pdf`;
     const reportPath = path.join(outputDir, fileName);
