@@ -82,7 +82,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       labels: [],
       phy: [],
       chem: [],
-      math: [],
+      maths: [],
       bio: [],
       abs: [],
       "Phy(10)": [],
@@ -115,7 +115,9 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
 
       const subjectsMap = {
         phy: `Result_${date}_Phy`,
+        phy: `Result_${date}_Physics`,
         chem: `Result_${date}_Chem`,
+        chem: `Result_${date}_Chemistry`,
         maths: `Result_${date}_Maths`,
         math: `Result_${date}_Math`,
         bio: `Result_${date}_Bio`,
@@ -135,14 +137,14 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       for (const [label, key] of Object.entries(subjectsMap)) {
         if (row.hasOwnProperty(key)) {
           const value = row[key] ?? 0;
-          entry[label.replace(/ \(.*?\)/, "")] = value; // strip "(xx)" for main keys
-          subjectWiseData[label].push(value);
+          entry[label?.replace(/ \(.*?\)/, "")] = value; // strip "(xx)" for main keys
+          subjectWiseData[label]?.push(value);
           hasValidSubject = true;
         }
       }
 
       if (hasValidSubject) {
-        const rankKey = `Result_${date}`;
+        const rankKey = `Result_${date}_Rank`;
         const totalKey = `Result_${date}_Total`;
         const altTotalKey = `Result_${date}_Tot`;
         const highestKey = row[`Result_${date}_High`]
@@ -271,6 +273,8 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       { key: "Physical Chemistry", label: "Physical Chemistry" },
       { key: "Organic Chemistry", label: "Organic Chemistry" },
       { key: "Inorg.Chem.", label: "Inorganic Chemistry" },
+      { key: "Inorganic Chemistry", label: "Inorganic Chemistry" },
+      
       { key: "Mathematics", label: "Mathematics" },
       { key: "Math", label: "Maths" }, // Added variation if needed
       { key: "Maths", label: "Maths" }, // Added variation if needed
@@ -328,11 +332,13 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
     console.log("photoUrl imageUrl cloudinaryBase", photoUrl, imageName);
 
     return {
-      name: row["NAME"] || row["Name"] || "Unnamed",
-      rollNo: (row["ROLL NO"] || row["Roll No"] || "Unknown").replace(/,/g, ""),
+      name: row["NAME"] || row["Name"] || row["Student Name"] || "Unnamed",
+      rollNo: (row["ROLL NO"] || row["Roll No"] || row["Roll Number"] || "Unknown").replace(/,/g, ""),
       batch: row["BATCH"] || row["Batch"] || "",
       motherName: row["M_N"] || row["Mother Name"] || "",
       fatherName: row["F_N"] || row["Father Name"] || "",
+      fatherContactNumber : row["Father No."],
+      motherContactNumber : row["Mother No."],
       batchStrength: row["Strength"],
       // photo : `../photographs/${row["Name"]}_${row["Roll No"]}`,
       // photo: "../assets/profileImg.png",
@@ -377,7 +383,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
 
   console.log("Generating reports...");
   for (const row of rows) {
-        const studentData = await parseReportData(row);
+    const studentData = await parseReportData(row);
 
     const { exists, report } = await checkIfReportCardExists(
       row["Roll No"].replace(/,/g, ""),
@@ -392,6 +398,8 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
     } else if (exists && type === "regenerate") {
       console.log("EXISTS REPORT", exists, report);
       const data = await deleteOldAndGenerateNew(ptmDate, studentData.rollNo);
+
+      console.log("data from createReportFromExcelFile", data);
     }
     const safeName = (studentData.name || "Student").replace(/\s+/g, "_");
     const fileName = `${safeName}_${studentData.rollNo}.pdf`;

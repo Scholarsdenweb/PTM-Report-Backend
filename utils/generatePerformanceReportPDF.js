@@ -13,6 +13,29 @@ const generatePerformanceReportPDF = async (data, filePath) => {
   console.log("data form generatePerformanceReportPDF", data);
   console.log("data.photo form generatePerformanceReportPDF", data.photo);
 
+  function convertScoreToPerformance(score) {
+
+
+    console.log("Score from convertScoreToPerformance", score);
+    if (score >= 9 && score <= 10) {
+      return "Excellent";
+    } else if (score >= 7 && score < 9) {
+      return "Good";
+    } else if (score >= 5 && score < 7) {
+      return "Needs Improvement";
+    } else {
+      return "Poor";
+    }
+  }
+
+  function evaluateScores(total, length) {
+    console.log("Total evaluateScores", total, length);
+    const average = total / length;
+    const performance = convertScoreToPerformance(average);
+
+    return performance;
+  }
+
   const getImageAsBase64 = (imagePath) => {
     try {
       console.log("get image path getImageAsBase64 ", imagePath);
@@ -26,15 +49,15 @@ const generatePerformanceReportPDF = async (data, filePath) => {
   };
 
   console.log("data form generatePerformanceReportPDF", data);
-    console.log("Student Data stringify: ", JSON.stringify(data.subjectWiseData));
-    console.log("Student Data: ", data.subjectWiseData);
-
+  console.log("Student Data stringify: ", JSON.stringify(data.subjectWiseData));
+  console.log("Student Data: ", data.subjectWiseData);
 
   // 1. Get all available subjects from jeeMain data
   const allPossibleSubjects = [
     { key: "phy", label: "Phy" },
     { key: "chem", label: "Chem" },
     { key: "math", label: "Math" },
+    { key: "maths", label: "Maths" },
     { key: "bio", label: "Bio" },
     { key: "abs", label: "ABS" },
     { key: "Phy(10)", label: "Phy(10)" },
@@ -144,10 +167,26 @@ const generatePerformanceReportPDF = async (data, filePath) => {
         <tr style="background: ${i % 2 === 0 ? "#f8eeda" : "#ffffff"};">
         
           <td>${row.subject}</td>
-          <td>${row.response}</td>
-          <td>${row.discipline}</td>
-          <td>${row.attention}</td>
-          <td>${row.homework}</td>
+          <td>${
+            row.subject === "Total"
+              ? evaluateScores(row.response, i )
+              : convertScoreToPerformance(row.response)
+          }</td>
+          <td>${
+            row.subject === "Total"
+              ? evaluateScores(row.discipline, i )
+              : convertScoreToPerformance(row.discipline)
+          }</td>
+          <td>${
+            row.subject === "Total"
+              ? evaluateScores(row.attention, i )
+              : convertScoreToPerformance(row.attention)
+          }</td>
+          <td>${
+            row.subject === "Total"
+              ? evaluateScores(row.homework, i )
+              : convertScoreToPerformance(row.homework)
+          }</td>
         </tr>`
     )
     .join("");
@@ -488,7 +527,9 @@ table {
 
       <div class="student-info">
         <div class="photo-section">
-          <img src="${data?.photo?.url || getImageAsBase64(data.photo)}" alt="Student Photo" />
+          <img src="${
+            data?.photo?.url || getImageAsBase64(data.photo)
+          }" alt="Student Photo" />
           <p><strong>Name:</strong> ${data.name}</p>
           <p><strong>Roll No.:</strong> ${data.rollNo}</p>
         </div>
@@ -569,7 +610,7 @@ ${heading}
   const colorMap = {
     phy: "#2f72da",
     chem: "#c61d23",
-    math: "#86b43b",
+    maths: "#86b43b",
     bio: "#ff9900",
     eng: "#8e44ad",
     sst: "#27ae60"
@@ -615,7 +656,7 @@ ${heading}
 
   function getSubjectName(key) {
     const names = {
-      phy: "Physics", chem: "Chemistry", math: "Maths", bio: "Biology",
+      phy: "Physics", chem: "Chemistry", maths: "Maths", bio: "Biology",
       eng: "English", sst: "SST"
     };
     return names[key.toLowerCase()] || key;

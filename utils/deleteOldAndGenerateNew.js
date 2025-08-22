@@ -59,32 +59,30 @@ const dayjs = require("dayjs");
 //   };
 // }
 
-const dayjs = require("dayjs");
-const ReportCard = require("../models/ReportCard");
-const Student = require("../models/Student");
+// const ReportCard = require("../models/ReportCard");
+// const Student = require("../models/Student");
 
-async function deleteOldAndGenerateNew(rollNo, ptmDate) {
-  const cleanedRollNo = String(rollNo).replace(/,/g, "").trim();
-  const student = await Student.findOne({ rollNo: cleanedRollNo });
+async function deleteOldAndGenerateNew(ptmDate,rollNo ) {
+  console.log("DeleteOldAndGenerateNew");
 
-  if (!student) {
-    return { exists: false, reason: "Student not found" };
-  }
+  try {
+    const cleanedRollNo = String(rollNo).replace(/,/g, "").trim();
 
-  const startOfDay = dayjs(ptmDate).startOf("day").toDate();
-  const endOfDay = dayjs(ptmDate).endOf("day").toDate();
 
-  // Find all reports of that day for that student
-  const oldReports = await ReportCard.find({
-    student: student._id,
-    reportDate: {
-      $gte: startOfDay,
-      $lte: endOfDay,
-    },
-  });
+    console.log("CleanedRollNo", cleanedRollNo);
+    const student = await Student.findOne({ rollNo: cleanedRollNo });
 
-  if (oldReports.length > 0) {
-   const deletedReport =  await ReportCard.deleteMany({
+    if (!student) {
+      return { exists: false, reason: "Student not found" };
+    }
+
+    const startOfDay = dayjs(ptmDate).startOf("day").toDate();
+    const endOfDay = dayjs(ptmDate).endOf("day").toDate();
+
+    console.log("startOfDay and endOfDay", startOfDay, endOfDay);
+
+    // Find all reports of that day for that student
+    const oldReports = await ReportCard.find({
       student: student._id,
       reportDate: {
         $gte: startOfDay,
@@ -92,21 +90,38 @@ async function deleteOldAndGenerateNew(rollNo, ptmDate) {
       },
     });
 
+    console.log("oldReports", oldReports);
 
+    if (oldReports.length > 0) {
+      const deletedReport = await ReportCard.deleteMany({
+        student: student._id,
+        reportDate: {
+          $gte: startOfDay,
+          $lte: endOfDay,
+        },
+      });
 
-    console.log("deletedReport from deleteOl")
+      console.log("deletedReport from deleteOl", deletedReport);
+
+      return {
+        deleted: true,
+        count: oldReports.length,
+        message: "Deleted existing reports for this date",
+      };
+    }
 
     return {
-      deleted: true,
-      count: oldReports.length,
-      message: "Deleted existing reports for this date",
+      deleted: false,
+      message: "No reports found on this date for this student",
+    };
+  } catch (error) {
+    console.log("error from deleteOldAndGenerateNew", error);
+
+    return {
+      deleted: false,
+      message: "No Report deleted because of error",
     };
   }
-
-  return {
-    deleted: false,
-    message: "No reports found on this date for this student",
-  };
 }
 
 module.exports = { deleteOldAndGenerateNew };
