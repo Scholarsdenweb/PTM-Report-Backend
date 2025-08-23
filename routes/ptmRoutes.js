@@ -1,14 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const PTMController = require('../controllers/PTMController');
+const WhatsappMessageController = require('../controllers/WhatsappMessageController');
 const upload = require('../middlewares/upload'); // ⬅️ This is your multer middleware
 const ptmController = new PTMController();
+
+const whatsappMessageConsoller = new WhatsappMessageController();
 const authMiddleware = require('../middlewares/authMiddleware');
 const isAdmin = require('../middlewares/isAdmin');
 
 
 router.post('/upload', upload.single("csvFile"), ptmController.handleUpload.bind(ptmController));
 router.post('/regenrate', upload.single("csvFile"), ptmController.handleUpload.bind(ptmController));
+router.post('/send-whatsapp-message',  whatsappMessageConsoller.handleSend.bind(whatsappMessageConsoller));
 
 router.get("/admin/reports", authMiddleware, isAdmin, ptmController.getAllReports.bind(ptmController));
 
