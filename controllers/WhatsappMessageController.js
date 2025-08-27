@@ -108,46 +108,50 @@ class WhatsappMessageController {
         // reportDate: { $gte: startOfDay, $lte: endOfDay },
       });
 
-
-
-      
-
-
-    //    const reports = await ReportCardModel.aggregate([
-    //         {
-    //           $match: {
-    //             reportDate: { $gte: dateStart, $lt: dateEnd },
-    //           },
-    //         },
-    //         {
-    //           $lookup: {
-    //             from: "students", // collection name (usually lowercase plural of model)
-    //             localField: "student",
-    //             foreignField: "_id",
-    //             as: "student",
-    //           },
-    //         },
-    //         {
-    //           $unwind: "$student",
-    //         },
-    //         {
-    //           $match: {
-    //             "student.batch": batch,
-    //           },
-    //         },
-    //       ]);
+      //    const reports = await ReportCardModel.aggregate([
+      //         {
+      //           $match: {
+      //             reportDate: { $gte: dateStart, $lt: dateEnd },
+      //           },
+      //         },
+      //         {
+      //           $lookup: {
+      //             from: "students", // collection name (usually lowercase plural of model)
+      //             localField: "student",
+      //             foreignField: "_id",
+      //             as: "student",
+      //           },
+      //         },
+      //         {
+      //           $unwind: "$student",
+      //         },
+      //         {
+      //           $match: {
+      //             "student.batch": batch,
+      //           },
+      //         },
+      //       ]);
 
       console.log("findReportCard", findReportCard);
+      console.log("findReportCard.name", findStudent[0].name);
 
-      const mobileNumbers = ["7903956216"];
+      const mobileNumbers = ["9719706242"];
 
-    //   const sendMessageOnWhatsapp = await this.whatsAppService.sendReport(
-    //     mobileNumbers,
-    //     findStudent.name,
-    //     findReportCard.secure_url
-    //   );
+const fileName = findReportCard.secure_url.split("/").pop();
 
-    //   console.log("sendMessageOnWhatsapp", sendMessageOnWhatsapp);
+
+
+
+      console.log("fileName", fileName);
+
+      const sendMessageOnWhatsapp = await this.whatsAppService.sendReport(
+        mobileNumbers,
+        findStudent[0].name,
+        findReportCard.secure_url,
+        fileName
+      );
+
+      console.log("sendMessageOnWhatsapp", sendMessageOnWhatsapp);
 
       const results = [];
 

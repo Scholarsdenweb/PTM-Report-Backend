@@ -2,8 +2,10 @@
 
 const axios = require("axios");
 
+require("dotenv").config();
+
 class WhatsAppService {
-  async sendReport(mobileNumbers, studentName, fileUrl) {
+  async sendReport(mobileNumbers, studentName, fileUrl, fileName) {
     // For directly form meta business
     // await axios.post(
     //   "https://graph.facebook.com/v18.0/YOUR_PHONE_NUMBER_ID/messages",
@@ -44,25 +46,60 @@ class WhatsAppService {
 
     // const pdfUrl =
     //   "https://res.cloudinary.com/dtytgoj3f/raw/upload/v1755693287/PTM_Document/PTM_Report/Abhijeet_Singh_2025130088.pdf";
-    const pdfUrl = fileUrl;
-    const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
-    const message_id = 4554;
 
     console.log("pdfUrl", fileUrl);
+
+    const whatsappApi = process.env.WHATSAPP_API;
+
+    console.log("whatsappApi", whatsappApi);
+
+    console.log(
+      "mobileNumbers , studentName, fileUrl, fileName ",
+      mobileNumbers,
+      studentName,
+      fileUrl,
+      fileName
+    );
 
     for (const mobileNumber of mobileNumbers) {
       const formattedNumber = `91${mobileNumber}`;
 
-      const sendMessage = await axios.get(
-        `https://www.fast2sms.com/dev/whatsapp?authorization=${WHATSAPP_TOKEN}&message_id=${message_id}&numbers=${formattedNumber}&variables_values=${studentName}&media_url=${pdfUrl}`,
+      console.log("mobile Number", formattedNumber);
+
+      // Whatsapp call for fast2sms
+      // const sendMessage = await axios.get(
+      //   `https://www.fast2sms.com/dev/whatsapp?authorization=${WHATSAPP_TOKEN}&message_id=${message_id}&numbers=${formattedNumber}&variables_values=${studentName}&media_url=${pdfUrl}`,
+      //   {
+      //     headers: {
+      //       "Content-Type": "application/json",
+      //     },
+      //   }
+      // );
+
+      const sendWhatsappMessage = await axios.post(
+        "https://backend.api-wa.co/campaign/myoperator/api/v2",
         {
-          headers: {
-            "Content-Type": "application/json",
+          apiKey: `${whatsappApi}`,
+          campaignName: "PTM_Report_Campaign",
+          destination: formattedNumber,
+          userName: "Scholars Den",
+          templateParams: ["$FirstName"],
+          source: "new-landing-page form",
+          media: {
+            url: fileUrl,
+            filename: `${fileName}`,
+          },
+          buttons: [],
+          carouselCards: [],
+          location: {},
+          attributes: {},
+          paramsFallbackValue: {
+            FirstName: `${studentName}`,
           },
         }
       );
 
-      console.log("sendMessage ", sendMessage);
+      console.log("sendMessage ", sendWhatsappMessage);
     }
   }
 }
