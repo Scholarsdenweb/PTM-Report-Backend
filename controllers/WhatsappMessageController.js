@@ -137,10 +137,7 @@ class WhatsappMessageController {
 
       const mobileNumbers = ["9719706242"];
 
-const fileName = findReportCard.secure_url.split("/").pop();
-
-
-
+      const fileName = findReportCard.secure_url.split("/").pop();
 
       console.log("fileName", fileName);
 

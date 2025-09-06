@@ -188,7 +188,6 @@ router.get("/:batch/dates", async (req, res) => {
 //       .skip(skip)
 //       .limit(limitNumber);
 
-
 //    return res.json({
 //       reports,
 //       totalPages: Math.ceil(totalReports / limitNumber) || 1,
@@ -200,7 +199,6 @@ router.get("/:batch/dates", async (req, res) => {
 //     res.status(500).json({ error: "Server error" });
 //   }
 // });
-
 
 router.get("/reports", async (req, res) => {
   try {
@@ -235,7 +233,9 @@ router.get("/reports", async (req, res) => {
     };
 
     // Find only IDs of matched students
-    const matchedStudents = await StudentModel.find(studentFilter).select("_id");
+    const matchedStudents = await StudentModel.find(studentFilter).select(
+      "_id"
+    );
 
     if (matchedStudents.length === 0) {
       return res.json({
@@ -287,8 +287,6 @@ router.get("/reports", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
-
 
 // router.get("/reports/download", async (req, res) => {
 //   try {
@@ -653,11 +651,11 @@ router.get("/admin/reports/download", async (req, res) => {
 });
 
 router.post("/fetchDataByRollNo", async (req, res) => {
-
-  const {rollNo } = req.body;
-  const findStudentDetails = await Student.find({rollNo});
+  const { rollNo } = req.body;
+  const findStudentDetails = await Student.find({ rollNo });
   console.log("FIndStudentDetails", findStudentDetails);
-
 });
+
+
 
 module.exports = router;
