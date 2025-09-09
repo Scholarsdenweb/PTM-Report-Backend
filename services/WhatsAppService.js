@@ -76,30 +76,38 @@ class WhatsAppService {
       //   }
       // );
 
-      const sendWhatsappMessage = await axios.post(
-        "https://backend.api-wa.co/campaign/myoperator/api/v2",
-        {
-          apiKey: `${whatsappApi}`,
-          campaignName: "PTM_Report_Campaign",
-          destination: formattedNumber,
-          userName: "Scholars Den",
-          templateParams: ["$FirstName"],
-          source: "new-landing-page form",
-          media: {
-            url: fileUrl,
-            filename: `${fileName}`,
-          },
-          buttons: [],
-          carouselCards: [],
-          location: {},
-          attributes: {},
-          paramsFallbackValue: {
-            FirstName: `${studentName}`,
-          },
-        }
-      );
+      try {
+        const sendWhatsappMessage = await axios.post(
+          "https://backend.api-wa.co/campaign/myoperator/api/v2",
+          {
+            apiKey: `${whatsappApi}`,
+            campaignName: "PTM_Report_Campaign",
+            destination: formattedNumber,
+            userName: "Scholars Den",
+            templateParams: ["$FirstName"],
+            source: "new-landing-page form",
+            media: {
+              url: fileUrl,
+              filename: `${fileName}`,
+            },
+            buttons: [],
+            carouselCards: [],
+            location: {},
+            attributes: {},
+            paramsFallbackValue: {
+              FirstName: `${studentName}`,
+            },
+          }
+        );
+        console.log(
+          "sendMessage from whatsappServices",
+          sendWhatsappMessage.status
+        );
+      } catch (error) {
+        console.log("error from whatsAppservice", error);
+      }
 
-      console.log("sendMessage ", sendWhatsappMessage);
+      // console.log("sendMessage ", sendWhatsappMessage);cl
     }
   }
 }

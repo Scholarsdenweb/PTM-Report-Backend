@@ -1,6 +1,7 @@
 // // src/controllers/WhatsappMessageController.js
 
 const path = require("path");
+const mongoose = require("mongoose");
 
 const WhatsAppService = require("../services/WhatsAppService");
 const createReportFromExcelFile = require("../utils/createReportFromExcelFile");
@@ -78,22 +79,114 @@ class WhatsappMessageController {
   //     }
   //   }
 
+  //   async handleSend(req, res) {
+  //     try {
+  //       console.log("req.body ", req.body);
+
+  //       // if (!rollNo || !reportDate) {
+  //       //   return res
+  //       //     .status(400)
+  //       //     .json({ message: "rollNo and reportDate are required" });
+  //       // }
+
+  // const { reportIds } = req.body;
+
+  // const students = await Student.find({ _id: { $in: reportIds } });
+
+  //       console.log("findStudent from whatsappMessageConsoller", students);
+
+  //       const startOfDay = new Date(reportDate);
+  //       startOfDay.setHours(0, 0, 0, 0);
+
+  //       const endOfDay = new Date(reportDate);
+  //       endOfDay.setHours(23, 59, 59, 999);
+
+  //       console.log("startDate and endDate", startOfDay, endOfDay);
+
+  //       const findReportCard = await ReportCardModel.findOne({
+  //         // student: findStudent._id,
+  //         // reportDate: { $gte: startOfDay, $lte: endOfDay },
+  //       });
+
+  //       //    const reports = await ReportCardModel.aggregate([
+  //       //         {
+  //       //           $match: {
+  //       //             reportDate: { $gte: dateStart, $lt: dateEnd },
+  //       //           },
+  //       //         },
+  //       //         {
+  //       //           $lookup: {
+  //       //             from: "students", // collection name (usually lowercase plural of model)
+  //       //             localField: "student",
+  //       //             foreignField: "_id",
+  //       //             as: "student",
+  //       //           },
+  //       //         },
+  //       //         {
+  //       //           $unwind: "$student",
+  //       //         },
+  //       //         {
+  //       //           $match: {
+  //       //             "student.batch": batch,
+  //       //           },
+  //       //         },
+  //       //       ]);
+
+  //       console.log("findReportCard", findReportCard);
+  //       console.log("findReportCard.name", findStudent[0].name);
+
+  //       const mobileNumbers = ["9719706242"];
+
+  //       const fileName = findReportCard.secure_url.split("/").pop();
+
+  //       console.log("fileName", fileName);
+
+  //       const sendMessageOnWhatsapp = await this.whatsAppService.sendReport(
+  //         mobileNumbers,
+  //         findStudent[0].name,
+  //         findReportCard.secure_url,
+  //         fileName
+  //       );
+
+  //       console.log("sendMessageOnWhatsapp", sendMessageOnWhatsapp);
+
+  //       const results = [];
+
+  //       res.status(200).json({
+  //         message: "Reports generated and sent successfully",
+  //         results,
+  //       });
+  //     } catch (err) {
+  //       console.error("Error in WhatsappMessageController:", err);
+  //       res
+  //         .status(500)
+  //         .json({ error: "Internal server error", details: err.message });
+  //     }
+  //   }
+
   async handleSend(req, res) {
     try {
-      const { rollNo, reportDate } = req.body;
-
       console.log("req.body ", req.body);
-      console.log("rollNo, reportDate ", rollNo);
 
-      if (!rollNo || !reportDate) {
-        return res
-          .status(400)
-          .json({ message: "rollNo and reportDate are required" });
+      const { reportIds, date: reportDate } = req.body;
+
+      console.log("data from req.body", reportDate);
+
+      if (!reportIds || !Array.isArray(reportIds) || reportIds.length === 0) {
+        return res.status(400).json({ message: "reportIds are required" });
       }
 
-      const findStudent = await Student.find({ rollNo });
+      if (!reportDate) {
+        return res.status(400).json({ message: "reportDate is required" });
+      }
 
-      console.log("findStudent from whatsappMessageConsoller", findStudent);
+      const objectIds = reportIds.map((id) => new mongoose.Types.ObjectId(id));
+
+      console.log("objectIds", objectIds);
+
+      const students = await Student.find({ _id: { $in: objectIds } });
+
+      console.log("students found:", students);
 
       const startOfDay = new Date(reportDate);
       startOfDay.setHours(0, 0, 0, 0);
@@ -103,64 +196,66 @@ class WhatsappMessageController {
 
       console.log("startDate and endDate", startOfDay, endOfDay);
 
-      const findReportCard = await ReportCardModel.findOne({
-        // student: findStudent._id,
-        // reportDate: { $gte: startOfDay, $lte: endOfDay },
-      });
-
-      //    const reports = await ReportCardModel.aggregate([
-      //         {
-      //           $match: {
-      //             reportDate: { $gte: dateStart, $lt: dateEnd },
-      //           },
-      //         },
-      //         {
-      //           $lookup: {
-      //             from: "students", // collection name (usually lowercase plural of model)
-      //             localField: "student",
-      //             foreignField: "_id",
-      //             as: "student",
-      //           },
-      //         },
-      //         {
-      //           $unwind: "$student",
-      //         },
-      //         {
-      //           $match: {
-      //             "student.batch": batch,
-      //           },
-      //         },
-      //       ]);
-
-      console.log("findReportCard", findReportCard);
-      console.log("findReportCard.name", findStudent[0].name);
-
-      const mobileNumbers = ["9719706242"];
-
-      const fileName = findReportCard.secure_url.split("/").pop();
-
-      console.log("fileName", fileName);
-
-      const sendMessageOnWhatsapp = await this.whatsAppService.sendReport(
-        mobileNumbers,
-        findStudent[0].name,
-        findReportCard.secure_url,
-        fileName
-      );
-
-      console.log("sendMessageOnWhatsapp", sendMessageOnWhatsapp);
-
       const results = [];
 
+      console.log("StartOfDay and endOfDay", startOfDay, endOfDay);
+
+      for (const student of students) {
+        const report = await ReportCardModel.findOne({
+          student: student._id,
+          reportDate: { $gte: startOfDay, $lte: endOfDay },
+        });
+
+        if (!report || !report.secure_url) {
+          console.warn(`No report found for student ${student.name}`);
+          results.push({
+            student: student.name,
+            status: "No report found",
+          });
+          continue;
+        }
+        console.log("student from whatsmessageController", student);
+        const mobileNumber = "9719706242";
+        // const mobileNumber = student.mobile || student.whatsappNumber;
+
+        console.log("mobileNumber", mobileNumber);
+
+        // if (!mobileNumber) {
+        //   console.warn(`No mobile number found for student ${student.name}`);
+        //   results.push({
+        //     student: student.name,
+        //     status: "No mobile number",
+        //   });
+        //   continue;
+        // }
+
+        const fileName = report.secure_url.split("/").pop();
+
+        const sendResult = await this.whatsAppService.sendReport(
+          [mobileNumber],
+          student.name,
+          report.secure_url,
+          fileName
+        );
+
+        results.push({
+          student: student.name,
+          mobile: mobileNumber,
+          status: "Sent",
+          messageId: sendResult?.messageId || null,
+        });
+      }
+
       res.status(200).json({
-        message: "Reports generated and sent successfully",
+        message: "Reports processed",
         results,
       });
     } catch (err) {
-      console.error("Error in WhatsappMessageController:", err);
-      res
-        .status(500)
-        .json({ error: "Internal server error", details: err.message });
+      console.log("Error in WhatsappMessageController:", err);
+      res.status(500).json({
+        error: "Internal server error",
+        details: err.message,
+      });
     }
   }
 }
