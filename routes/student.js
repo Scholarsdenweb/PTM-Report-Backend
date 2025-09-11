@@ -83,10 +83,6 @@
 
 // module.exports = router;
 
-
-
-
-
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
@@ -98,7 +94,47 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // const Student = require("../models/Student");
 const Result = require("../models/ReportCard");
+const ReportCard = require("../models/ReportCard");
 
+router.post("/student-by-batch", async (req, res) => {
+  try {
+    const { batch } = req.body;
+
+    const fetchAllStudentByBatch = await Student.find({ batch: batch }).select(
+      "rollNo name"
+    );
+    console.log("fetchAllStudentByBatch", fetchAllStudentByBatch);
+
+    return res.status(200).json({ student: fetchAllStudentByBatch });
+  } catch (error) {
+    console.log("error frpm student-by-batch", error);
+    return res.status(500).json({ message: "Server Error" });
+  }
+});
+
+router.post("/get-all-student-reports", async (req, res) => {
+  try {
+    console.log("req body", req.body);
+    const { rollNo } = req.body;
+
+    console.log("rollNo from get-all-student-reports", rollNo);
+
+    const getStudentID = await Student.findOne({ rollNo });
+
+    console.log("getStudentID", getStudentID);
+
+    const getStudentAllReports = await ReportCard.find({
+      student: getStudentID,
+    });
+
+    console.log("getStudentAllReports", getStudentAllReports);
+
+    return res.status(200).json({ reports: getStudentAllReports });
+  } catch (error) {
+    console.log("error form get-all-student-reports", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
 
 router.delete("/delete/:rollNo", async (req, res) => {
   try {
@@ -107,7 +143,9 @@ router.delete("/delete/:rollNo", async (req, res) => {
     // Find the student
     const student = await Student.findOne({ rollNo });
     if (!student) {
-      return res.status(404).json({ message: `Student with rollNo ${rollNo} not found.` });
+      return res
+        .status(404)
+        .json({ message: `Student with rollNo ${rollNo} not found.` });
     }
 
     // Delete all report cards for that student
@@ -116,23 +154,31 @@ router.delete("/delete/:rollNo", async (req, res) => {
     // Delete the student
     await Student.deleteOne({ _id: student._id });
 
-    res.status(200).json({ message: `Student ${rollNo} and their reports deleted successfully.` });
+    res.status(200).json({
+      message: `Student ${rollNo} and their reports deleted successfully.`,
+    });
   } catch (error) {
     console.error("Error deleting student and reports:", error);
-    res.status(500).json({ message: "Failed to delete student and reports", error: error.message });
+    res.status(500).json({
+      message: "Failed to delete student and reports",
+      error: error.message,
+    });
   }
 });
-
 
 router.delete("/delete-all", async (req, res) => {
   try {
     await Result.deleteMany({});
     await Student.deleteMany({});
-    
-    res.status(200).json({ message: "All reports and students deleted successfully" });
+
+    res
+      .status(200)
+      .json({ message: "All reports and students deleted successfully" });
   } catch (error) {
     console.error("Error deleting all data:", error);
-    res.status(500).json({ message: "Failed to delete all data", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to delete all data", error: error.message });
   }
 });
 
@@ -146,7 +192,6 @@ router.post(
     const uploadPromises = req.files.map((file) => {
       return new Promise((resolve) => {
         try {
-
           console.log("File.originalName", file.originalname);
           const [rawName, rollNoWithExt] = file.originalname.split("_");
           const rollNo = rollNoWithExt?.split(".")[0];

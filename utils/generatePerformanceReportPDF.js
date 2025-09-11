@@ -56,6 +56,8 @@ const generatePerformanceReportPDF = async (data, filePath) => {
   const allPossibleSubjects = [
     { key: "phy", label: "Phy" },
     { key: "chem", label: "Chem" },
+    { key: "Phy", label: "Phy" },
+    { key: "Chem", label: "Chem" },
     { key: "math", label: "Math" },
     { key: "maths", label: "Maths" },
     { key: "bio", label: "Bio" },
