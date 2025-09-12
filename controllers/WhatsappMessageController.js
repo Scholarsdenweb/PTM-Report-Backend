@@ -215,10 +215,11 @@ class WhatsappMessageController {
           continue;
         }
         console.log("student from whatsmessageController", student);
-        const mobileNumber = "9719706242";
+       const mobileNumbers = [student.fatherContact, student.motherContact].filter(Boolean);
+
         // const mobileNumber = student.mobile || student.whatsappNumber;
 
-        console.log("mobileNumber", mobileNumber);
+        console.log("mobileNumber", mobileNumbers);
 
         // if (!mobileNumber) {
         //   console.warn(`No mobile number found for student ${student.name}`);
@@ -232,7 +233,7 @@ class WhatsappMessageController {
         const fileName = report.secure_url.split("/").pop();
 
         const sendResult = await this.whatsAppService.sendReport(
-          [mobileNumber],
+          mobileNumbers,
           student.name,
           report.secure_url,
           fileName
@@ -240,7 +241,7 @@ class WhatsappMessageController {
 
         results.push({
           student: student.name,
-          mobile: mobileNumber,
+          mobile: mobileNumbers,
           status: "Sent",
           messageId: sendResult?.messageId || null,
         });

@@ -169,20 +169,22 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       ...new Set(
         Object.keys(row)
           .filter(
-            (key) => key.startsWith("JEE_Advanced_Result_") && key.split("_")[1]
+            (key) => key.startsWith("JEE_Advanced_Result_") && key.split("_")[3]
           )
-          .map((key) => key.split("_")[1])
+          .map((key) => key.split("_")[3])
       ),
     ];
 
+
+    console.log("advDates", advDates);
     advDates.forEach((date) => {
-      const rankKey = `JEE_Advanced_Result_${date}`;
+      const rankKey = `JEE_Advanced_Result_${date}_Rank`;
       // const rankKey = `JEE_Advanced_Result_${date}`;
       const paper1 = {
-        phy: row[`JEE_Advanced_Result_${date}_Paper 1_Phy`] ?? 0,
-        chem: row[`JEE_Advanced_Result_${date}_Paper 1_Chem`] ?? 0,
-        maths: row[`JEE_Advanced_Result_${date}_Paper 1_Math`] ?? 0,
-        total: row[`JEE_Advanced_Result_${date}_Paper 1_Total_Marks`] ?? 0,
+        phy: row[`JEE_Advanced_Paper_1_Result_${date}_Phy`] ?? 0,
+        chem: row[`JEE_Advanced_Paper_1_Result_${date}_Chem`] ?? 0,
+        maths: row[`JEE_Advanced_Paper_1_Result_${date}_Math`] ?? 0,
+        total: row[`JEE_Advanced_Paper_1_Result_${date}_Total_Marks`] ?? 0,
       };
       // const paper1 = {
       //   phy: row[`JEE_Advanced_Result_${date}_P1`] ?? 0,
@@ -192,10 +194,10 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       // };
 
       const paper2 = {
-        phy: row[`JEE_Advanced_Result_${date}_Paper 2_Phy`] ?? 0,
-        chem: row[`JEE_Advanced_Result_${date}_Paper 2_Chem`] ?? 0,
-        maths: row[`JEE_Advanced_Result_${date}_Paper 2_Math`] ?? 0,
-        total: row[`JEE_Advanced_Result_${date}_Paper 2_Total_Marks`] ?? 0,
+        phy: row[`JEE_Advanced_Paper_2_Result_${date}_Phy`] ?? 0,
+        chem: row[`JEE_Advanced_Paper_2_Result_${date}_Chem`] ?? 0,
+        maths: row[`JEE_Advanced_Paper_2_Result_${date}_Math`] ?? 0,
+        total: row[`JEE_Advanced_Paper_2_Result_${date}_Total_Marks`] ?? 0,
       };
       // const paper2 = {
       //   phy: row[`JEE_Advanced_Result_${date}_P2`] ?? 0,
@@ -204,10 +206,10 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       //   total: row[`JEE_Advanced_Result_${date}_T2`] ?? 0,
       // };
 
-      const total = row[`JEE_Advanced_Result_Grand_Total${date}`] ?? 0;
+      const total = row[`JEE_Advanced_Result_Grand_Total_${date}`] ?? 0;
       const highest =
         row[`JEE_Advanced_Result_${date}_High`] ||
-        row[`Result_${date}_Highest_Marks`];
+        row[`JEE_Advanced_Result_${date}_Highest_Marks`];
 
       // Only push if at least one subject or total is present
       if (
@@ -226,6 +228,10 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
         });
       }
     });
+
+
+    console.log("JEE MAIN", jeeMain);
+    console.log("JEE ADV", jeeAdv);
 
 
 

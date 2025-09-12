@@ -257,9 +257,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
   if (data.jeeAdv?.length > 0) {
     jeeAdvancedTable = `
     <div class="table-container">
-
         <div class="section-title"><span>JEE (Advanced) Pattern</span></div>
-
     <table class="advanced-table">
       <thead>
         <tr>
@@ -275,7 +273,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
           <th>Chem</th>
           <th>Math</th>
           <th>Total</th>
-          <th>Phy</th>x
+          <th>Phy</th>
           <th>Chem</th>
           <th>Math</th>
           <th>Total</th>
@@ -406,7 +404,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
       .container {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 5px;
         padding: 20px;
         
 
@@ -546,7 +544,7 @@ table {
 
       .graph-container {
         width: 100%;
-        height: 250px;
+        height: 240px;
       }
 
       .graph-container {
@@ -566,7 +564,7 @@ table {
         align-items: center;
         page-break-inside: avoid;
         break-inside: avoid;
-        gap: 2px;
+        gap: 1px;
       }
 
       .headingAndGraph h4 {
@@ -624,9 +622,23 @@ ${heading}
           ${showGraph}
 
 
-          ${
-            boardResultRow
-              ? `
+       
+
+    </div>
+
+
+
+
+
+
+    <div class="container" style="padding: 0 0 0 0;">
+
+ ${showTable}
+
+
+    ${
+      boardResultRow
+        ? `
   <div class="table-container">
     <div class="section-title"><span>Board Result</span></div>
     <table class="marks-table">
@@ -639,20 +651,9 @@ ${heading}
     </table>
   </div>
 `
-              : ""
-          }
+        : ""
+    }
 
-
-    </div>
-
-
-
-
-
-
-    <div class="container" style="padding: 0 0 0 0;">
-
- ${showTable}
 
 
 <div class="table-container ">

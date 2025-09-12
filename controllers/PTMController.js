@@ -36,6 +36,13 @@ class PTMController {
 
       const results = [];
 
+      function removeCommas(input) {
+  if (typeof input !== 'string') {
+    input = String(input); // ensure it's a string
+  }
+  return input.replace(/,/g, '');
+}
+
       for (const data of reportDataArray) {
         const { studentData, reportPath } = data;
 
@@ -45,6 +52,9 @@ class PTMController {
           studentData.rollNo
         );
 
+        console.log("uploadedUrl", uploadedUrl);
+        console.log("studentData", studentData);
+
         // Upsert student
         let student = await StudentModel.findOneAndUpdate(
           { rollNo: studentData.rollNo },
@@ -53,14 +63,17 @@ class PTMController {
             fatherName: studentData.fatherName,
             motherName: studentData.motherName,
             batch: studentData.batch,
-            fatherContactNumber:
-              studentData.fatherContactNumber || studentData.FATHER_CONTACT_NO,
-            motherContactNumber:
-              studentData.motherContactNumber || studentData.MOTHER_CONTACT_NO,
+            fatherContact:
+              removeCommas(studentData.fatherContactNumber) || removeCommas(studentData.FATHER_CONTACT_NO),
+            motherContact:
+              removeCommas(studentData.motherContactNumber) || removeCommas(studentData.MOTHER_CONTACT_NO),
           },
           { upsert: true, new: true }
         );
 
+
+
+        console.log("Student from handleUpload", student);
         // Create report document
         await ReportCardModel.create({
           student: student._id,

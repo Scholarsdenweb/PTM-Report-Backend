@@ -84,7 +84,7 @@ class WhatsAppService {
             campaignName: "PTM_Report_Campaign",
             destination: formattedNumber,
             userName: "Scholars Den",
-            templateParams: ["$FirstName"],
+            templateParams: [studentName],
             source: "new-landing-page form",
             media: {
               url: fileUrl,
@@ -94,9 +94,7 @@ class WhatsAppService {
             carouselCards: [],
             location: {},
             attributes: {},
-            paramsFallbackValue: {
-              FirstName: `${studentName}`,
-            },
+         
           }
         );
         console.log(
