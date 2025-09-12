@@ -14,8 +14,6 @@ const generatePerformanceReportPDF = async (data, filePath) => {
   console.log("data.photo form generatePerformanceReportPDF", data.photo);
 
   function convertScoreToPerformance(score) {
-
-
     console.log("Score from convertScoreToPerformance", score);
     if (score >= 9 && score <= 10) {
       return "Excellent";
@@ -31,6 +29,8 @@ const generatePerformanceReportPDF = async (data, filePath) => {
   function evaluateScores(total, length) {
     console.log("Total evaluateScores", total, length);
     const average = total / length;
+
+    console.log("average from evaluateScores", average);
     const performance = convertScoreToPerformance(average);
 
     return performance;
@@ -86,6 +86,65 @@ const generatePerformanceReportPDF = async (data, filePath) => {
     <th>Highest</th>
   </tr>
 `;
+
+  //   const boardHeader = `
+  //   <tr>
+  //     <th>Date</th>
+  //     <th>Subject</th>
+  //     <th>Marks Obtained</th>
+
+  //     <th>Rank</th>
+  //     ${availableSubjects.map((sub) => `<th>${sub.label}</th>`).join("")}
+  //     <th>Highest Marks</th>
+  //   </tr>
+  // `;
+
+  // const boardResultRow = data?.boardResult
+  //   ?.map((row, i) => {
+  //     const subjectCells = availableSubjects
+  //       .map((sub) => `<td>${row[sub.key] ?? ""}</td>`)
+  //       .join("");
+  //     return `
+  //     <tr style="background: ${i % 2 === 0 ? "#f8eeda" : "#ffffff"};">
+  //       <td>${row.date || ""}</td>
+  //       <td>${subjectCells || ""}</td>
+
+  //       <td>${row.rank || ""}</td>
+  //       <td>${row.highest || ""}</td>
+  //     </tr>`;
+  //   })
+  //   .join("");
+
+  // Step: Convert boardResult object to structured rows
+
+  const boardHeader = `
+  <tr>
+    <th>Date</th>
+    <th>Subject</th>
+    <th>Marks Obtained</th>
+    <th>Highest Marks</th>
+    <th>Rank</th>
+  </tr>
+`;
+  const boardResultData = data?.boardResult || [];
+
+  console.log("boardResultData from console", boardResultData);
+
+  const boardResultRow = boardResultData
+    .map(
+      (row, i) => `
+    <tr style="background: ${i % 2 === 0 ? "#f8eeda" : "#ffffff"};">
+      <td>${row.examDate || ""}</td>
+      <td>${row.subject || ""}</td>
+      <td>${row.marksObtained || ""}</td>
+      <td>${row.highestMarks || ""}</td>
+      <td>${row.rank || ""}</td>
+    </tr>
+  `
+    )
+    .join("");
+
+  console.log("BoardResultRow from console", boardResultRow);
 
   // 3. Build the dynamic table rows
   const jeeMainRows = data?.jeeMain
@@ -171,22 +230,22 @@ const generatePerformanceReportPDF = async (data, filePath) => {
           <td>${row.subject}</td>
           <td>${
             row.subject === "Total"
-              ? evaluateScores(row.response, i )
+              ? evaluateScores(row.response, i)
               : convertScoreToPerformance(row.response)
           }</td>
           <td>${
             row.subject === "Total"
-              ? evaluateScores(row.discipline, i )
+              ? evaluateScores(row.discipline, i)
               : convertScoreToPerformance(row.discipline)
           }</td>
           <td>${
             row.subject === "Total"
-              ? evaluateScores(row.attention, i )
+              ? evaluateScores(row.attention, i)
               : convertScoreToPerformance(row.attention)
           }</td>
           <td>${
             row.subject === "Total"
-              ? evaluateScores(row.homework, i )
+              ? evaluateScores(row.homework, i)
               : convertScoreToPerformance(row.homework)
           }</td>
         </tr>`
@@ -216,7 +275,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
           <th>Chem</th>
           <th>Math</th>
           <th>Total</th>
-          <th>Phy</th>
+          <th>Phy</th>x
           <th>Chem</th>
           <th>Math</th>
           <th>Total</th>
@@ -238,6 +297,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
      
             <td>${row.date}</td>
             <td>${row.rank}</td>
+
             <td>${row.science[`Phy(14)`]}</td>
             <td>${row.science["Chem(13)"]}</td>
             <td>${row.science["Bio(13)"]}</td>
@@ -408,13 +468,13 @@ const generatePerformanceReportPDF = async (data, filePath) => {
         text-align: center;
         font-size: 32px;
         font-weight: bold;
-        padding-top: ${jeeMainRows.length > 3 ? "10px" : "30px"};
-        margin-bottom : ${jeeMainRows.length > 3 ? "5px" : "10px"};;
+        padding-top: ${jeeMainRows.length > 3 ? "8px" : "30px"};
+        margin-bottom : ${jeeMainRows.length > 3 ? "4px" : "10px"};
       }
 
       .section-title span {
         border-bottom: 3px solid black;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
       }
 
       .marks-table {
@@ -433,7 +493,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
 
       .charts {
         display: flex;
-        margin-top: 1px;
+        // margin-top: 1px;
         justify-content: space-between;
         page-break-inside: avoid;
         break-inside: avoid;
@@ -547,6 +607,8 @@ table {
       </div>
 <div class="table-container">
 
+
+
 ${heading}
       <table class="marks-table">
         <thead>
@@ -559,12 +621,40 @@ ${heading}
         </tbody>
       </table>
       </div>
+          ${showGraph}
 
-    ${showGraph}
+
+          ${
+            boardResultRow
+              ? `
+  <div class="table-container">
+    <div class="section-title"><span>Board Result</span></div>
+    <table class="marks-table">
+      <thead>
+        ${boardHeader}
+      </thead>
+      <tbody>
+        ${boardResultRow}
+      </tbody>
+    </table>
+  </div>
+`
+              : ""
+          }
+
+
     </div>
 
-    <div class="container" style="padding: 50px 0 0 0;">
+
+
+
+
+
+    <div class="container" style="padding: 0 0 0 0;">
+
  ${showTable}
+
+
 <div class="table-container ">
       <div class="section-title"><span>Attendance Report</span></div>
       <table class="marks-table">

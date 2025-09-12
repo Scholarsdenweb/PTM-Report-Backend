@@ -20,6 +20,7 @@ async function findImageInCloudinaryFolder( imageName) {
       public_id: resource.public_id,
     };
   } else {
+    console.log("IMgae not found in cloudinary");
     return null; // Not found
   }
 }

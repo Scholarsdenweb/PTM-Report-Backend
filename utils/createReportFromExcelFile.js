@@ -85,6 +85,9 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       maths: [],
       bio: [],
       abs: [],
+      Phy: [],
+      Chem: [],
+      Bio: [],
       "Phy(10)": [],
       "Chem(10)": [],
       "Bio(10)": [],
@@ -114,10 +117,10 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       subjectWiseData.labels.push(date);
 
       const subjectsMap = {
-        phy: `Result_${date}_Phy`,
         phy: `Result_${date}_Physics`,
-        chem: `Result_${date}_Chem`,
+        // phy: `Result_${date}_Physics`,
         chem: `Result_${date}_Chemistry`,
+        // chem: `Result_${date}_Chemistry`,
         maths: `Result_${date}_Maths`,
         math: `Result_${date}_Math`,
         bio: `Result_${date}_Bio`,
@@ -149,7 +152,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
         const altTotalKey = `Result_${date}_Tot`;
         const highestKey = row[`Result_${date}_High`]
           ? `Result_${date}_High`
-          : `Result_${date}_Highest Marks`;
+          : `Result_${date}_Highest_Marks`;
         // const highestKey = `Result_${date}_High` || `Result_${date}_Highest Marks`;
 
         entry.rank = row[rankKey] || "-";
@@ -166,45 +169,45 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       ...new Set(
         Object.keys(row)
           .filter(
-            (key) => key.startsWith("AdvancedResult_") && key.split("_")[1]
+            (key) => key.startsWith("JEE_Advanced_Result_") && key.split("_")[1]
           )
           .map((key) => key.split("_")[1])
       ),
     ];
 
     advDates.forEach((date) => {
-      const rankKey = `AdvancedResult_${date}`;
-      // const rankKey = `AdvancedResult_${date}`;
+      const rankKey = `JEE_Advanced_Result_${date}`;
+      // const rankKey = `JEE_Advanced_Result_${date}`;
       const paper1 = {
-        phy: row[`AdvancedResult_${date}_Paper 1_Phy`] ?? 0,
-        chem: row[`AdvancedResult_${date}_Paper 1_Chem`] ?? 0,
-        maths: row[`AdvancedResult_${date}_Paper 1_Math`] ?? 0,
-        total: row[`AdvancedResult_${date}_Paper 1_Total`] ?? 0,
+        phy: row[`JEE_Advanced_Result_${date}_Paper 1_Phy`] ?? 0,
+        chem: row[`JEE_Advanced_Result_${date}_Paper 1_Chem`] ?? 0,
+        maths: row[`JEE_Advanced_Result_${date}_Paper 1_Math`] ?? 0,
+        total: row[`JEE_Advanced_Result_${date}_Paper 1_Total_Marks`] ?? 0,
       };
       // const paper1 = {
-      //   phy: row[`AdvancedResult_${date}_P1`] ?? 0,
-      //   chem: row[`AdvancedResult_${date}_C1`] ?? 0,
-      //   maths: row[`AdvancedResult_${date}_M1`] ?? 0,
-      //   total: row[`AdvancedResult_${date}_T1`] ?? 0,
+      //   phy: row[`JEE_Advanced_Result_${date}_P1`] ?? 0,
+      //   chem: row[`JEE_Advanced_Result_${date}_C1`] ?? 0,
+      //   maths: row[`JEE_Advanced_Result_${date}_M1`] ?? 0,
+      //   total: row[`JEE_Advanced_Result_${date}_T1`] ?? 0,
       // };
 
       const paper2 = {
-        phy: row[`AdvancedResult_${date}_Paper 2_Phy`] ?? 0,
-        chem: row[`AdvancedResult_${date}_Paper 2_Chem`] ?? 0,
-        maths: row[`AdvancedResult_${date}_Paper 2_Math`] ?? 0,
-        total: row[`AdvancedResult_${date}_Paper 2_Total`] ?? 0,
+        phy: row[`JEE_Advanced_Result_${date}_Paper 2_Phy`] ?? 0,
+        chem: row[`JEE_Advanced_Result_${date}_Paper 2_Chem`] ?? 0,
+        maths: row[`JEE_Advanced_Result_${date}_Paper 2_Math`] ?? 0,
+        total: row[`JEE_Advanced_Result_${date}_Paper 2_Total_Marks`] ?? 0,
       };
       // const paper2 = {
-      //   phy: row[`AdvancedResult_${date}_P2`] ?? 0,
-      //   chem: row[`AdvancedResult_${date}_C2`] ?? 0,
-      //   maths: row[`AdvancedResult_${date}_M2`] ?? 0,
-      //   total: row[`AdvancedResult_${date}_T2`] ?? 0,
+      //   phy: row[`JEE_Advanced_Result_${date}_P2`] ?? 0,
+      //   chem: row[`JEE_Advanced_Result_${date}_C2`] ?? 0,
+      //   maths: row[`JEE_Advanced_Result_${date}_M2`] ?? 0,
+      //   total: row[`JEE_Advanced_Result_${date}_T2`] ?? 0,
       // };
 
-      const total = row[`AdvancedResult_${date}_Grand Total`] ?? 0;
+      const total = row[`JEE_Advanced_Result_Grand_Total${date}`] ?? 0;
       const highest =
-        row[`AdvancedResult_${date}_High`] ||
-        row[`Result_${date}_Highest Marks`];
+        row[`JEE_Advanced_Result_${date}_High`] ||
+        row[`Result_${date}_Highest_Marks`];
 
       // Only push if at least one subject or total is present
       if (
@@ -220,6 +223,48 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
           paper2,
           total,
           highest,
+        });
+      }
+    });
+
+
+
+
+
+    const boardResult = [];
+
+    Object.keys(row).forEach((key) => {
+      const match = key.match(/^Board_Result_(.+?)_(.+)$/);
+
+      if (match) {
+        const [_, dateRaw, fieldRaw] = match;
+        const date = dateRaw.trim();
+        const field = fieldRaw.trim();
+
+        // Skip rank and highest marks for now; handle below
+        if (
+          field.toLowerCase() === "rank" ||
+          field.toLowerCase() === "highest marks" ||
+          field.toLowerCase() === "highest_marks"
+        ) {
+          return;
+        }
+
+        // Construct related keys
+        const subject = field;
+        const rank = row[`Board_Result_${date}_Rank`] || "-";
+        const highestMarks =
+          row[`Board_Result_${date}_Highest marks`] ||
+          row[`Board_Result_${date}_Highest_Marks`] ||
+          "-";
+        const marksObtained = row[key] ?? "-";
+
+        boardResult.push({
+          examDate: date,
+          subject,
+          rank,
+          highestMarks,
+          marksObtained,
         });
       }
     });
@@ -272,9 +317,12 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       { key: "Phy.Chem.", label: "Physical Chemistry" },
       { key: "Physical Chemistry", label: "Physical Chemistry" },
       { key: "Organic Chemistry", label: "Organic Chemistry" },
-      { key: "Inorg.Chem.", label: "Inorganic Chemistry" },
-      { key: "Inorganic Chemistry", label: "Inorganic Chemistry" },
-      
+      { key: "Organic_Chemistry", label: "Organic Chemistry" },
+      { key: "Inorg.Chem", label: "Inorganic Chemistry" },
+      { key: "Inorganic_Chemistry", label: "Inorganic Chemistry" },
+      { key: "Inorg_Chemistry", label: "Inorganic Chemistry" },
+      { key: "Org_Chemistry", label: "Organic Chemistry" },
+
       { key: "Mathematics", label: "Mathematics" },
       { key: "Math", label: "Maths" }, // Added variation if needed
       { key: "Maths", label: "Maths" }, // Added variation if needed
@@ -325,6 +373,9 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       .trim()}`;
 
     const photoUrl = await findImageInCloudinaryFolder(imageName);
+
+
+    console.log("PhotoUrl from createReportFormExcelFile", photoUrl);
     // const photoUrl = `${cloudinaryBase}/${imageName}.jpg`; // or .png if applicable
 
     const formatted = dayjs(ptmDate).format("DD-MM-YY dddd"); // 'dddd' = full day name
@@ -333,12 +384,18 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
 
     return {
       name: row["NAME"] || row["Name"] || row["Student Name"] || "Unnamed",
-      rollNo: (row["ROLL NO"] || row["Roll No"] || row["Roll Number"] || "Unknown").replace(/,/g, ""),
+      rollNo: (
+        row["ROLL NO"] ||
+        row["Roll No"] ||
+        row["Roll Number"] ||
+        "Unknown"
+      ).replace(/,/g, ""),
       batch: row["BATCH"] || row["Batch"] || "",
       motherName: row["M_N"] || row["Mother Name"] || "",
       fatherName: row["F_N"] || row["Father Name"] || "",
-      fatherContactNumber : row["Father No."],
-      motherContactNumber : row["Mother No."],
+      fatherContactNumber: row["Father Contact No."],
+      motherContactNumber: row["Mother Contact No."],
+      studentContactNumber: row["Students Contact No."],
       batchStrength: row["Strength"],
       // photo : `../photographs/${row["Name"]}_${row["Roll No"]}`,
       // photo: "../assets/profileImg.png",
@@ -349,6 +406,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       subjectWiseData,
       jeeMain,
       jeeAdv,
+      boardResult,
       subjecttivePattern,
       attendance,
       feedback,
@@ -386,7 +444,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
     const studentData = await parseReportData(row);
 
     const { exists, report } = await checkIfReportCardExists(
-      row["Roll No"].replace(/,/g, ""),
+      row["Roll No"]?.replace(/,/g, ""),
       ptmDate
     );
 
