@@ -9,6 +9,7 @@ const { removeFileFormServer } = require("../utils/removeFileFormServer");
 const StudentModel = require("../models/Student");
 const ReportCardModel = require("../models/ReportCard");
 const Student = require("../models/Student");
+const { report } = require("process");
 
 class WhatsappMessageController {
   constructor() {
@@ -164,87 +165,180 @@ class WhatsappMessageController {
   //     }
   //   }
 
+  // async handleSend(req, res) {
+  //   try {
+  //     console.log("req.body ", req.body);
+
+  //     const { reportIds, date: reportDate } = req.body;
+
+  //     console.log("data from req.body", reportDate);
+
+  //     if (!reportIds || !Array.isArray(reportIds) || reportIds.length === 0) {
+  //       return res.status(400).json({ message: "reportIds are required" });
+  //     }
+
+  //     if (!reportDate) {
+  //       return res.status(400).json({ message: "reportDate is required" });
+  //     }
+
+  //     const objectIds = reportIds.map((id) => new mongoose.Types.ObjectId(id));
+
+  //     console.log("objectIds", objectIds);
+
+  //     const students = await Student.find({ _id: { $in: objectIds } });
+
+  //     console.log("students found:", students);
+
+  //     const startOfDay = new Date(reportDate);
+  //     startOfDay.setHours(0, 0, 0, 0);
+
+  //     const endOfDay = new Date(reportDate);
+  //     endOfDay.setHours(23, 59, 59, 999);
+
+  //     console.log("startDate and endDate", startOfDay, endOfDay);
+
+  //     const results = [];
+
+  //     console.log("StartOfDay and endOfDay", startOfDay, endOfDay);
+
+  //     for (const student of students) {
+  //       const report = await ReportCardModel.find({
+  //         student: student._id,
+  //         reportDate: { $gte: startOfDay, $lte: endOfDay },
+  //       });
+
+  //       if (!report || !report.secure_url) {
+  //         console.warn(`No report found for student ${student.name}`);
+  //         results.push({
+  //           student: student.name,
+  //           status: "No report found",
+  //         });
+  //         continue;
+  //       }
+  //       console.log("student from whatsmessageController", student);
+  //       //  const mobileNumbers = [student.fatherContact, student.motherContact].filter(Boolean);
+  //       const mobileNumbers = ["9719706242"];
+
+  //       // const mobileNumber = student.mobile || student.whatsappNumber;
+
+  //       console.log("mobileNumber", mobileNumbers);
+
+  //       // if (!mobileNumber) {
+  //       //   console.warn(`No mobile number found for student ${student.name}`);
+  //       //   results.push({
+  //       //     student: student.name,
+  //       //     status: "No mobile number",
+  //       //   });
+  //       //   continue;
+  //       // }
+
+  //       const fileName = report.secure_url.split("/").pop();
+
+  //       const sendResult = await this.whatsAppService.sendReport(
+  //         mobileNumbers,
+  //         student.name,
+  //         report.secure_url,
+  //         fileName
+  //       );
+
+  //       results.push({
+  //         student: student.name,
+  //         mobile: mobileNumbers,
+  //         status: "Sent",
+  //         messageId: sendResult?.messageId || null,
+  //       });
+  //     }
+
+  //     res.status(200).json({
+  //       message: "Reports processed",
+  //       results,
+  //     });
+  //   } catch (err) {
+  //     console.log("Error in WhatsappMessageController:", err);
+  //     res.status(500).json({
+  //       error: "Internal server error",
+  //       details: err.message,
+  //     });
+  //   }
+  // }
+
   async handleSend(req, res) {
     try {
       console.log("req.body ", req.body);
 
-      const { reportIds, date: reportDate } = req.body;
+      const { reportIds, params } = req.body;
+      const reportDate = params?.date;
 
-      console.log("data from req.body", reportDate);
+      console.log("reportDate from handleSend", reportDate);
 
       if (!reportIds || !Array.isArray(reportIds) || reportIds.length === 0) {
         return res.status(400).json({ message: "reportIds are required" });
       }
 
-      if (!reportDate) {
-        return res.status(400).json({ message: "reportDate is required" });
-      }
-
       const objectIds = reportIds.map((id) => new mongoose.Types.ObjectId(id));
-
-      console.log("objectIds", objectIds);
 
       const students = await Student.find({ _id: { $in: objectIds } });
 
-      console.log("students found:", students);
-
-      const startOfDay = new Date(reportDate);
-      startOfDay.setHours(0, 0, 0, 0);
-
-      const endOfDay = new Date(reportDate);
-      endOfDay.setHours(23, 59, 59, 999);
-
-      console.log("startDate and endDate", startOfDay, endOfDay);
-
       const results = [];
 
-      console.log("StartOfDay and endOfDay", startOfDay, endOfDay);
-
       for (const student of students) {
-        const report = await ReportCardModel.findOne({
-          student: student._id,
-          reportDate: { $gte: startOfDay, $lte: endOfDay },
-        });
+        let reports = [];
 
-        if (!report || !report.secure_url) {
-          console.warn(`No report found for student ${student.name}`);
+        if (reportDate) {
+          const startOfDay = new Date(reportDate);
+          startOfDay.setHours(0, 0, 0, 0);
+
+          const endOfDay = new Date(reportDate);
+          endOfDay.setHours(23, 59, 59, 999);
+
+          console.log("starting and ending date", startOfDay, endOfDay);
+
+          reports = await ReportCardModel.find({
+            student: student._id,
+            reportDate: { $gte: startOfDay, $lte: endOfDay },
+          });
+        } else {
+          console.log("ReportDate is undefined");
+          reports = await ReportCardModel.find({
+            student: student._id,
+          });
+        }
+
+        if (!reports.length) {
+          console.warn(`No reports found for student ${student.name}`);
           results.push({
             student: student.name,
-            status: "No report found",
+            status: "No reports found",
           });
           continue;
         }
-        console.log("student from whatsmessageController", student);
-       const mobileNumbers = [student.fatherContact, student.motherContact].filter(Boolean);
 
-        // const mobileNumber = student.mobile || student.whatsappNumber;
+        // You can replace this with actual contact logic
+        const mobileNumbers = [
+          student.fatherContact,
+          student.motherContact,
+        ].filter(Boolean);
 
-        console.log("mobileNumber", mobileNumbers);
+        // const mobileNumbers = ["9719706242"]; // Or: [student.fatherContact, student.motherContact].filter(Boolean)
 
-        // if (!mobileNumber) {
-        //   console.warn(`No mobile number found for student ${student.name}`);
-        //   results.push({
-        //     student: student.name,
-        //     status: "No mobile number",
-        //   });
-        //   continue;
-        // }
+        for (const report of reports) {
+          const fileName = report.secure_url.split("/").pop();
 
-        const fileName = report.secure_url.split("/").pop();
+          const sendResult = await this.whatsAppService.sendReport(
+            mobileNumbers,
+            student.name,
+            report.secure_url,
+            fileName
+          );
 
-        const sendResult = await this.whatsAppService.sendReport(
-          mobileNumbers,
-          student.name,
-          report.secure_url,
-          fileName
-        );
-
-        results.push({
-          student: student.name,
-          mobile: mobileNumbers,
-          status: "Sent",
-          messageId: sendResult?.messageId || null,
-        });
+          results.push({
+            student: student.name,
+            mobile: mobileNumbers,
+            status: "Sent",
+            messageId: sendResult?.messageId || null,
+            reportDate: report.reportDate,
+          });
+        }
       }
 
       res.status(200).json({

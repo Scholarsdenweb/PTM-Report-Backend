@@ -560,58 +560,274 @@ router.get("/reports", async (req, res) => {
 //   }
 // });
 
+// router.get("/admin/reports/download", async (req, res) => {
+//   const { batch, date, rollNo } = req.query;
+
+//   console.log("Received download request for batch:", batch, "and date:", date);
+
+//   if (!batch || !date) {
+//     console.log("Missing batch or date in query");
+//     return res.status(400).json({ error: "Batch and date are required." });
+//   }
+
+//   try {
+//     const dateStart = new Date(date);
+//     const dateEnd = new Date(date);
+//     dateEnd.setDate(dateEnd.getDate() + 1);
+
+//     console.log("Searching reports from", dateStart, "to", dateEnd);
+//     const reports = await ReportCardModel.aggregate([
+//       {
+//         $match: {
+//           reportDate: { $gte: dateStart, $lt: dateEnd },
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: "students", // collection name (usually lowercase plural of model)
+//           localField: "student",
+//           foreignField: "_id",
+//           as: "student",
+//         },
+//       },
+//       {
+//         $unwind: "$student",
+//       },
+//       {
+//         $match: {
+//           "student.batch": batch,
+//         },
+//       },
+//     ]);
+
+//     console.log("Found reports:", reports.length);
+
+//     if (!reports.length) {
+//       console.log("No reports found for given date and batch");
+//       return res
+//         .status(404)
+//         .json({ error: "No reports found for given date and batch." });
+//     }
+
+//     res.attachment(`PTM_Reports_${batch}_${date}.zip`);
+//     const archive = archiver("zip", { zlib: { level: 9 } });
+
+//     archive.on("error", (err) => {
+//       console.error("Archiver error:", err);
+//       res.status(500).end();
+//     });
+
+//     archive.pipe(res);
+
+//     for (let i = 0; i < reports.length; i++) {
+//       const report = reports[i];
+//       console.log(
+//         `Fetching report [${i + 1}/${reports.length}] for`,
+//         report.student.name,
+//         report.student.rollNo
+//       );
+
+//       try {
+//         const response = await axios.get(report.secure_url, {
+//           responseType: "arraybuffer",
+//         });
+//         const fileName = `${report.student.name}_${report.student.rollNo}.pdf`;
+//         archive.append(response.data, { name: fileName });
+//         console.log(`Appended ${fileName} to archive`);
+//       } catch (downloadErr) {
+//         console.error(
+//           `Failed to fetch PDF for ${report.student.name} (${report.student.rollNo}):`,
+//           downloadErr.message
+//         );
+//       }
+//     }
+
+//     archive.finalize();
+//     console.log("Archive finalized and sent to client");
+//   } catch (error) {
+//     console.error("Download error:", error.message);
+//     res.status(500).json({ error: "Failed to download reports." });
+//   }
+// });
+
+// const archiver = require("archiver");
+// const axios = require("axios");
+
+// router.get("/admin/reports/download", async (req, res) => {
+//   const { batch, date, rollNo } = req.query;
+
+//   try {
+//     let reports = [];
+
+//     // 🔹 Case 1: Download by rollNo (individual student)
+//     if (rollNo) {
+//       const student = await Student.findOne({ rollNo });
+
+//       if (!student) {
+//         return res.status(404).json({ error: "Student not found." });
+//       }
+
+//       reports = await ReportCardModel.find({ student: student._id }).populate(
+//         "student"
+//       );
+
+//       if (!reports.length) {
+//         return res
+//           .status(404)
+//           .json({ error: "No reports found for this student." });
+//       }
+
+//       res.attachment(`PTM_Reports_RollNo_${rollNo}.zip`);
+//     }
+
+//     // 🔹 Case 2: Download by batch + date
+//     else if (batch && date) {
+//       const dateStart = new Date(date);
+//       const dateEnd = new Date(date);
+//       dateEnd.setDate(dateEnd.getDate() + 1);
+
+//       reports = await ReportCardModel.aggregate([
+//         {
+//           $match: {
+//             reportDate: { $gte: dateStart, $lt: dateEnd },
+//           },
+//         },
+//         {
+//           $lookup: {
+//             from: "students",
+//             localField: "student",
+//             foreignField: "_id",
+//             as: "student",
+//           },
+//         },
+//         { $unwind: "$student" },
+//         { $match: { "student.batch": batch } },
+//       ]);
+
+//       if (!reports.length) {
+//         return res
+//           .status(404)
+//           .json({ error: "No reports found for given batch and date." });
+//       }
+
+//       res.attachment(`PTM_Reports_Batch_${batch}_Date_${date}.zip`);
+//     }
+
+//     // 🔴 Invalid: No valid params
+//     else {
+//       return res
+//         .status(400)
+//         .json({ error: "Provide either rollNo or batch and date." });
+//     }
+
+//     // 🔹 Create zip archive
+//     const archive = archiver("zip", { zlib: { level: 9 } });
+//     archive.on("error", (err) => {
+//       console.error("Archiver error:", err);
+//       res.status(500).end();
+//     });
+
+//     archive.pipe(res);
+
+//     for (let i = 0; i < reports.length; i++) {
+//       const report = reports[i];
+//       const student = report.student;
+
+//       try {
+//         const response = await axios.get(report.secure_url, {
+//           responseType: "arraybuffer",
+//         });
+
+//         const fileName = `${student.name}_${student.rollNo}.pdf`;
+//         archive.append(response.data, { name: fileName });
+
+//         console.log(`Appended: ${fileName}`);
+//       } catch (err) {
+//         console.error(
+//           `Failed to download PDF for ${student.name} (${student.rollNo}):`,
+//           err.message
+//         );
+//       }
+//     }
+
+//     archive.finalize();
+//     console.log("Zip archive finalized and sent");
+//   } catch (err) {
+//     console.error("Download route error:", err.message);
+//     res.status(500).json({ error: "Server error during download." });
+//   }
+// });
+
 router.get("/admin/reports/download", async (req, res) => {
-  const { batch, date } = req.query;
-
-  console.log("Received download request for batch:", batch, "and date:", date);
-
-  if (!batch || !date) {
-    console.log("Missing batch or date in query");
-    return res.status(400).json({ error: "Batch and date are required." });
-  }
+  console.log("batchId from req.params", req.params);
+  const { batchId, date, rollNo } = req.query;
 
   try {
-    const dateStart = new Date(date);
-    const dateEnd = new Date(date);
-    dateEnd.setDate(dateEnd.getDate() + 1);
+    let reports = [];
 
-    console.log("Searching reports from", dateStart, "to", dateEnd);
-    const reports = await ReportCardModel.aggregate([
-      {
-        $match: {
-          reportDate: { $gte: dateStart, $lt: dateEnd },
-        },
-      },
-      {
-        $lookup: {
-          from: "students", // collection name (usually lowercase plural of model)
-          localField: "student",
-          foreignField: "_id",
-          as: "student",
-        },
-      },
-      {
-        $unwind: "$student",
-      },
-      {
-        $match: {
-          "student.batch": batch,
-        },
-      },
-    ]);
+    // 🔹 Case 1: Download by rollNo (individual student)
+    if (rollNo) {
+      const student = await Student.findOne({ rollNo });
 
-    console.log("Found reports:", reports.length);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found." });
+      }
 
-    if (!reports.length) {
-      console.log("No reports found for given date and batch");
-      return res
-        .status(404)
-        .json({ error: "No reports found for given date and batch." });
+      reports = await ReportCardModel.find({ student: student._id }).populate(
+        "student"
+      );
+
+      if (!reports.length) {
+        return res
+          .status(404)
+          .json({ error: "No reports found for this student." });
+      }
+
+      res.attachment(`PTM_Reports_RollNo_${rollNo}.zip`);
     }
 
-    res.attachment(`PTM_Reports_${batch}_${date}.zip`);
-    const archive = archiver("zip", { zlib: { level: 9 } });
+    // 🔹 Case 2: Download by batchId + date
+    else if (batchId && date) {
+      const dateStart = new Date(date);
+      const dateEnd = new Date(date);
+      dateEnd.setDate(dateEnd.getDate() + 1);
 
+      reports = await ReportCardModel.aggregate([
+        {
+          $match: {
+            reportDate: { $gte: dateStart, $lt: dateEnd },
+          },
+        },
+        {
+          $lookup: {
+            from: "students",
+            localField: "student",
+            foreignField: "_id",
+            as: "student",
+          },
+        },
+        { $unwind: "$student" },
+        { $match: { "student.batch": batchId } },
+      ]);
+
+      if (!reports.length) {
+        return res
+          .status(404)
+          .json({ error: "No reports found for given batchId and date." });
+      }
+
+      res.attachment(`PTM_Reports_Batch_${batchId}_Date_${date}.zip`);
+    }
+
+    // 🔴 Invalid: No valid params
+    else {
+      return res
+        .status(400)
+        .json({ error: "Provide either rollNo or batch and date." });
+    }
+
+    // 🔹 Create zip archive
+    const archive = archiver("zip", { zlib: { level: 9 } });
     archive.on("error", (err) => {
       console.error("Archiver error:", err);
       res.status(500).end();
@@ -621,32 +837,30 @@ router.get("/admin/reports/download", async (req, res) => {
 
     for (let i = 0; i < reports.length; i++) {
       const report = reports[i];
-      console.log(
-        `Fetching report [${i + 1}/${reports.length}] for`,
-        report.student.name,
-        report.student.rollNo
-      );
+      const student = report.student;
 
       try {
         const response = await axios.get(report.secure_url, {
           responseType: "arraybuffer",
         });
-        const fileName = `${report.student.name}_${report.student.rollNo}.pdf`;
+
+        const fileName = `${student.name}_${student.rollNo}.pdf`;
         archive.append(response.data, { name: fileName });
-        console.log(`Appended ${fileName} to archive`);
-      } catch (downloadErr) {
+
+        console.log(`Appended: ${fileName}`);
+      } catch (err) {
         console.error(
-          `Failed to fetch PDF for ${report.student.name} (${report.student.rollNo}):`,
-          downloadErr.message
+          `Failed to download PDF for ${student.name} (${student.rollNo}):`,
+          err.message
         );
       }
     }
 
     archive.finalize();
-    console.log("Archive finalized and sent to client");
-  } catch (error) {
-    console.error("Download error:", error.message);
-    res.status(500).json({ error: "Failed to download reports." });
+    console.log("Zip archive finalized and sent");
+  } catch (err) {
+    console.error("Download route error:", err.message);
+    res.status(500).json({ error: "Server error during download." });
   }
 });
 
@@ -655,7 +869,5 @@ router.post("/fetchDataByRollNo", async (req, res) => {
   const findStudentDetails = await Student.find({ rollNo });
   console.log("FIndStudentDetails", findStudentDetails);
 });
-
-
 
 module.exports = router;

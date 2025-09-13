@@ -100,8 +100,9 @@ router.post("/student-by-batch", async (req, res) => {
   try {
     const { batch } = req.body;
 
+    // const fetchAllStudentByBatch = await Student.find({ batch: batch });
     const fetchAllStudentByBatch = await Student.find({ batch: batch }).select(
-      "rollNo name"
+      "rollNo name photoUrl"
     );
     console.log("fetchAllStudentByBatch", fetchAllStudentByBatch);
 
@@ -125,7 +126,7 @@ router.post("/get-all-student-reports", async (req, res) => {
 
     const getStudentAllReports = await ReportCard.find({
       student: getStudentID,
-    });
+    }).populate("student");
 
     console.log("getStudentAllReports", getStudentAllReports);
 
