@@ -96,6 +96,35 @@ const upload = multer({ storage: multer.memoryStorage() });
 const Result = require("../models/ReportCard");
 const ReportCard = require("../models/ReportCard");
 
+
+
+
+
+// GET /students/search
+router.get("/search", async (req, res) => {
+  const { batch, rollNo } = req.query;
+
+  try {
+    const query = {
+      batch: batch,
+    };
+
+    if (rollNo) {
+      query.rollNo = { $regex: rollNo, $options: "i" };
+    }
+
+    const students = await Student.find(query).limit(50);
+    res.json({ students });
+  } catch (error) {
+    console.error("Error searching students:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
+
+
+
 router.post("/student-by-batch", async (req, res) => {
   try {
     const { batch } = req.body;

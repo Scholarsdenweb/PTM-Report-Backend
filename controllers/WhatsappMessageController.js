@@ -262,97 +262,222 @@ class WhatsappMessageController {
   //   }
   // }
 
+  // async handleSend(req, res) {
+  //   try {
+  //     console.log("req.body ", req.body);
+
+  //     const { reportIds, params } = req.body;
+  //     const reportDate = params?.date;
+
+  //     console.log("reportDate from handleSend", reportDate);
+
+  //     if (!reportIds || !Array.isArray(reportIds) || reportIds.length === 0) {
+  //       return res.status(400).json({ message: "reportIds are required" });
+  //     }
+
+  //     const objectIds = reportIds.map((id) => new mongoose.Types.ObjectId(id));
+
+  //     const students = await Student.find({ _id: { $in: objectIds } });
+
+  //     const results = [];
+
+  //     for (const student of students) {
+  //       let reports = [];
+
+  //       if (reportDate) {
+  //         const startOfDay = new Date(reportDate);
+  //         startOfDay.setHours(0, 0, 0, 0);
+
+  //         const endOfDay = new Date(reportDate);
+  //         endOfDay.setHours(23, 59, 59, 999);
+
+  //         console.log("starting and ending date", startOfDay, endOfDay);
+
+  //         reports = await ReportCardModel.find({
+  //           student: student._id,
+  //           reportDate: { $gte: startOfDay, $lte: endOfDay },
+  //         });
+  //       } else {
+  //         console.log("ReportDate is undefined");
+  //         reports = await ReportCardModel.find({
+  //           student: student._id,
+  //         });
+  //       }
+
+  //       if (!reports.length) {
+  //         console.warn(`No reports found for student ${student.name}`);
+  //         results.push({
+  //           student: student.name,
+  //           status: "No reports found",
+  //         });
+  //         continue;
+  //       }
+
+  //       // You can replace this with actual contact logic
+  //       const mobileNumbers = [
+  //         student.fatherContact,
+  //         student.motherContact,
+  //       ].filter(Boolean);
+
+  //       // const mobileNumbers = ["9719706242"]; // Or: [student.fatherContact, student.motherContact].filter(Boolean)
+
+  //       for (const report of reports) {
+  //         const fileName = report.secure_url.split("/").pop();
+
+  //         const sendResult = await this.whatsAppService.sendReport(
+  //           mobileNumbers,
+  //           student.name,
+  //           report.secure_url,
+  //           fileName
+  //         );
+
+  //         results.push({
+  //           student: student.name,
+  //           mobile: mobileNumbers,
+  //           status: "Sent",
+  //           messageId: sendResult?.messageId || null,
+  //           reportDate: report.reportDate,
+  //         });
+  //       }
+  //     }
+
+  //     res.status(200).json({
+  //       message: "Reports processed",
+  //       results,
+  //     });
+  //   } catch (err) {
+  //     console.log("Error in WhatsappMessageController:", err);
+  //     res.status(500).json({
+  //       error: "Internal server error",
+  //       details: err.message,
+  //     });
+  //   }
+  // }
+
+
+
+
+
   async handleSend(req, res) {
-    try {
-      console.log("req.body ", req.body);
+  try {
+    const { params } = req.body;
+    const { batchId, date, rollNo } = params;
 
-      const { reportIds, params } = req.body;
-      const reportDate = params?.date;
+    if (!batchId && !rollNo) {
+      return res.status(400).json({ message: "batchId or rollNo is required" });
+    }
 
-      console.log("reportDate from handleSend", reportDate);
+    const students = rollNo
+      ? await Student.find({ rollNo })
+      : await Student.find({ batch: batchId });
 
-      if (!reportIds || !Array.isArray(reportIds) || reportIds.length === 0) {
-        return res.status(400).json({ message: "reportIds are required" });
+    if (!students.length) {
+      return res.status(404).json({ message: "No students found" });
+    }
+
+    const startOfDay = date ? new Date(date) : null;
+    const endOfDay = date ? new Date(date) : null;
+
+    if (date) {
+      startOfDay.setHours(0, 0, 0, 0);
+      endOfDay.setHours(23, 59, 59, 999);
+    }
+
+    const results = [];
+
+    for (const student of students) {
+      const reportQuery = {
+        student: student._id,
+      };
+
+      if (date) {
+        reportQuery.reportDate = { $gte: startOfDay, $lte: endOfDay };
       }
 
-      const objectIds = reportIds.map((id) => new mongoose.Types.ObjectId(id));
+      const reports = await ReportCardModel.find(reportQuery);
 
-      const students = await Student.find({ _id: { $in: objectIds } });
+      if (!reports.length) {
+        results.push({
+          student: student.name,
+          status: "No reports found",
+        });
+        continue;
+      }
 
-      const results = [];
+      const mobileNumbers = [student.fatherContact, student.motherContact].filter(Boolean);
 
-      for (const student of students) {
-        let reports = [];
+      for (const report of reports) {
+        // Avoid duplicate sending
+        const alreadySentFather = report.sendStatus?.father?.status === "sent";
+        const alreadySentMother = report.sendStatus?.mother?.status === "sent";
 
-        if (reportDate) {
-          const startOfDay = new Date(reportDate);
-          startOfDay.setHours(0, 0, 0, 0);
-
-          const endOfDay = new Date(reportDate);
-          endOfDay.setHours(23, 59, 59, 999);
-
-          console.log("starting and ending date", startOfDay, endOfDay);
-
-          reports = await ReportCardModel.find({
-            student: student._id,
-            reportDate: { $gte: startOfDay, $lte: endOfDay },
-          });
-        } else {
-          console.log("ReportDate is undefined");
-          reports = await ReportCardModel.find({
-            student: student._id,
-          });
-        }
-
-        if (!reports.length) {
-          console.warn(`No reports found for student ${student.name}`);
+        if (alreadySentFather && alreadySentMother) {
           results.push({
             student: student.name,
-            status: "No reports found",
+            reportId: report._id,
+            status: "Already sent",
           });
           continue;
         }
 
-        // You can replace this with actual contact logic
-        const mobileNumbers = [
-          student.fatherContact,
-          student.motherContact,
-        ].filter(Boolean);
+        const fileName = report.secure_url.split("/").pop();
 
-        // const mobileNumbers = ["9719706242"]; // Or: [student.fatherContact, student.motherContact].filter(Boolean)
+        const sendResult = await this.whatsAppService.sendReport(
+          mobileNumbers,
+          student.name,
+          report.secure_url,
+          fileName
+        );
 
-        for (const report of reports) {
-          const fileName = report.secure_url.split("/").pop();
+        // Update send status for each parent
+        const now = new Date();
 
-          const sendResult = await this.whatsAppService.sendReport(
-            mobileNumbers,
-            student.name,
-            report.secure_url,
-            fileName
-          );
+        const updatedSendStatus = {
+          father: {
+            status: student.fatherContact ? "sent" : "not_sent",
+            number: student.fatherContact || null,
+            time: student.fatherContact ? now : null,
+            deliveryReport: sendResult?.number || null,
+          },
+          mother: {
+            status: student.motherContact ? "sent" : "not_sent",
+            number: student.motherContact || null,
+            time: student.motherContact ? now : null,
+            deliveryReport: sendResult?.number || null,
+          },
+        };
 
-          results.push({
-            student: student.name,
-            mobile: mobileNumbers,
-            status: "Sent",
-            messageId: sendResult?.messageId || null,
-            reportDate: report.reportDate,
-          });
-        }
+        report.sendStatus = updatedSendStatus;
+        await report.save();
+
+        results.push({
+          student: student.name,
+          reportId: report._id,
+          mobile: mobileNumbers,
+          status: "Sent",
+          reportDate: report.reportDate,
+        });
       }
-
-      res.status(200).json({
-        message: "Reports processed",
-        results,
-      });
-    } catch (err) {
-      console.log("Error in WhatsappMessageController:", err);
-      res.status(500).json({
-        error: "Internal server error",
-        details: err.message,
-      });
     }
+
+    return res.status(200).json({
+      message: "Reports processed",
+      results,
+    });
+  } catch (err) {
+    console.error("handleSend error:", err);
+    return res.status(500).json({ error: "Internal Server Error", details: err.message });
   }
+}
+
+
+
+
+
+
+
+
+
 }
 
 module.exports = WhatsappMessageController;
