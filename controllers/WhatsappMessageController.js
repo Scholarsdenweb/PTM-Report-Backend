@@ -354,130 +354,169 @@ class WhatsappMessageController {
   //   }
   // }
 
-
-
-
-
   async handleSend(req, res) {
-  try {
-    const { params } = req.body;
-    const { batchId, date, rollNo } = params;
+    try {
+      console.log(
+        "Step 1 of handle function check data is available",
+        req.body
+      );
 
-    if (!batchId && !rollNo) {
-      return res.status(400).json({ message: "batchId or rollNo is required" });
-    }
+      const { params } = req.body;
+      const { batchId, date, rollNo } = params;
 
-    const students = rollNo
-      ? await Student.find({ rollNo })
-      : await Student.find({ batch: batchId });
+      if (!batchId && !rollNo) {
+        return res
+          .status(400)
+          .json({ message: "batchId or rollNo is required" });
+      }
 
-    if (!students.length) {
-      return res.status(404).json({ message: "No students found" });
-    }
+      const students = rollNo
+        ? await Student.find({ rollNo })
+        : await Student.find({ batch: batchId });
 
-    const startOfDay = date ? new Date(date) : null;
-    const endOfDay = date ? new Date(date) : null;
+      console.log("Step 2 of check student list", students);
 
-    if (date) {
-      startOfDay.setHours(0, 0, 0, 0);
-      endOfDay.setHours(23, 59, 59, 999);
-    }
+      if (!students.length) {
+        return res.status(404).json({ message: "No students found" });
+      }
 
-    const results = [];
-
-    for (const student of students) {
-      const reportQuery = {
-        student: student._id,
-      };
+      const startOfDay = date ? new Date(date) : null;
+      const endOfDay = date ? new Date(date) : null;
 
       if (date) {
-        reportQuery.reportDate = { $gte: startOfDay, $lte: endOfDay };
+        startOfDay.setHours(0, 0, 0, 0);
+        endOfDay.setHours(23, 59, 59, 999);
       }
 
-      const reports = await ReportCardModel.find(reportQuery);
+      const results = [];
 
-      if (!reports.length) {
-        results.push({
-          student: student.name,
-          status: "No reports found",
-        });
-        continue;
-      }
+      // const testdata = [students[0]];
+      // for (const student of testdata) {
 
-      const mobileNumbers = [student.fatherContact, student.motherContact].filter(Boolean);
+      for (const student of students) {
+        const reportQuery = {
+          student: student._id,
+        };
 
-      for (const report of reports) {
-        // Avoid duplicate sending
-        const alreadySentFather = report.sendStatus?.father?.status === "sent";
-        const alreadySentMother = report.sendStatus?.mother?.status === "sent";
+        if (date) {
+          reportQuery.reportDate = { $gte: startOfDay, $lte: endOfDay };
+        }
 
-        if (alreadySentFather && alreadySentMother) {
+        console.log("Step 3 to check reportQuery", reportQuery);
+
+        const reports = await ReportCardModel.find(reportQuery);
+        console.log("Step 4 to check resports", reports);
+
+        if (!reports.length) {
           results.push({
             student: student.name,
-            reportId: report._id,
-            status: "Already sent",
+            status: "No reports found",
           });
           continue;
         }
 
-        const fileName = report.secure_url.split("/").pop();
+        const mobileNumbers = [
+          student.fatherContact,
+          student.motherContact,
+        ].filter(Boolean);
 
-        const sendResult = await this.whatsAppService.sendReport(
-          mobileNumbers,
-          student.name,
-          report.secure_url,
-          fileName
-        );
+        // const mobileNumbers = ["9719706242", "7037550621"];
 
-        // Update send status for each parent
-        const now = new Date();
+        for (const report of reports) {
 
-        const updatedSendStatus = {
-          father: {
-            status: student.fatherContact ? "sent" : "not_sent",
-            number: student.fatherContact || null,
-            time: student.fatherContact ? now : null,
-            deliveryReport: sendResult?.number || null,
-          },
-          mother: {
-            status: student.motherContact ? "sent" : "not_sent",
-            number: student.motherContact || null,
-            time: student.motherContact ? now : null,
-            deliveryReport: sendResult?.number || null,
-          },
-        };
+          console.log("Step 5 report details", report);
+          // Avoid duplicate sending
+          const alreadySentFather =
+            report.sendStatus?.father?.status === "sent";
+          const alreadySentMother =
+            report.sendStatus?.mother?.status === "sent";
 
-        report.sendStatus = updatedSendStatus;
-        await report.save();
+          if (alreadySentFather && alreadySentMother) {
+            results.push({
+              student: student.name,
+              reportId: report._id,
+              status: "Already sent",
+            });
+            continue;
+          }
 
-        results.push({
-          student: student.name,
-          reportId: report._id,
-          mobile: mobileNumbers,
-          status: "Sent",
-          reportDate: report.reportDate,
-        });
+          const fileName = report.secure_url.split("/").pop();
+
+          console.log("Data from sendResult function", [
+            mobileNumbers,
+            student.name,
+            report.secure_url,
+            fileName,
+          ]);
+
+          const sendResults = await this.whatsAppService.sendReport(
+            mobileNumbers,
+            student.name,
+            report.secure_url,
+            fileName
+          );
+
+          console.log(
+            "Step 6 check data come from whatsappService",
+            sendResults
+          );
+
+          // Update send status for each parent
+          const now = new Date();
+
+          // const fatherResult = sendResults.find(
+          //   (r) => r.number === `919719706242`
+          // );
+          // const motherResult = sendResults.find(
+          //   (r) => r.number === `917037550621`
+          // );
+          const fatherResult = sendResults.find(
+            (r) => r.number === `91${student.fatherContact}`
+          );
+          const motherResult = sendResults.find(
+            (r) => r.number === `91${student.motherContact}`
+          );
+         
+
+          const updatedSendStatus = {
+            father: {
+              time: student.fatherContact ? now : null,
+              deliveryReport: fatherResult || null,
+            },
+            mother: {
+              time: student.motherContact ? now : null,
+              deliveryReport: motherResult || null,
+            },
+          };
+
+          console.log("STep 7 data saved in report table ", updatedSendStatus);
+
+          report.sendStatus = updatedSendStatus;
+          await report.save();
+
+          results.push({
+            student: student.name,
+            reportId: report._id,
+            mobile: mobileNumbers,
+            status: "Sent",
+            reportDate: report.reportDate,
+          });
+        }
       }
+
+      console.log("STep 8 final results", results);
+
+      return res.status(200).json({
+        message: "Reports processed",
+        results,
+      });
+    } catch (err) {
+      console.error("handleSend error:", err);
+      return res
+        .status(500)
+        .json({ error: "Internal Server Error", details: err.message });
     }
-
-    return res.status(200).json({
-      message: "Reports processed",
-      results,
-    });
-  } catch (err) {
-    console.error("handleSend error:", err);
-    return res.status(500).json({ error: "Internal Server Error", details: err.message });
   }
-}
-
-
-
-
-
-
-
-
-
 }
 
 module.exports = WhatsappMessageController;

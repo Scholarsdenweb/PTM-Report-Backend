@@ -6,52 +6,14 @@ require("dotenv").config();
 
 class WhatsAppService {
   async sendReport(mobileNumbers, studentName, fileUrl, fileName) {
-    // For directly form meta business
-    // await axios.post(
-    //   "https://graph.facebook.com/v18.0/YOUR_PHONE_NUMBER_ID/messages",
-    //   {
-    //     messaging_product: "whatsapp",
-    //     to: formattedNumber,
-    //     type: "template",
-    //     template: {
-    //       name: "ptm_report_template",
-    //       language: {
-    //         code: "en_US",
-    //       },
-    //       components: [
-    //         {
-    //           type: "body",
-    //           parameters: [
-    //             {
-    //               type: "text",
-    //               text: studentName,
-    //             },
-    //             {
-    //               type: "text",
-    //               text: "Example parameter 2",
-    //             },
-    //             // Add more parameters if your template needs them
-    //           ],
-    //         },
-    //       ],
-    //     },
-    //   },
-    //   {
-    //     headers: {
-    //       Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-    //       "Content-Type": "application/json",
-    //     },
-    //   }
-    // );
+    console.log("pdfUrl", fileUrl);
 
+    const results = [];
     // const pdfUrl =
     //   "https://res.cloudinary.com/dtytgoj3f/raw/upload/v1755693287/PTM_Document/PTM_Report/Abhijeet_Singh_2025130088.pdf";
 
-    console.log("pdfUrl", fileUrl);
-
     const whatsappApi = process.env.WHATSAPP_API;
 
-    console.log("whatsappApi", whatsappApi);
 
     console.log(
       "mobileNumbers , studentName, fileUrl, fileName ",
@@ -64,17 +26,14 @@ class WhatsAppService {
     for (const mobileNumber of mobileNumbers) {
       const formattedNumber = `91${mobileNumber}`;
 
-      console.log("mobile Number", formattedNumber);
+      let result = {
+        number: formattedNumber,
+        status: "failed",
+        responseCode: null,
+        error: null,
+      };
 
-      // Whatsapp call for fast2sms
-      // const sendMessage = await axios.get(
-      //   `https://www.fast2sms.com/dev/whatsapp?authorization=${WHATSAPP_TOKEN}&message_id=${message_id}&numbers=${formattedNumber}&variables_values=${studentName}&media_url=${pdfUrl}`,
-      //   {
-      //     headers: {
-      //       "Content-Type": "application/json",
-      //     },
-      //   }
-      // );
+      console.log("mobile Number", formattedNumber);
 
       try {
         const sendWhatsappMessage = await axios.post(
@@ -94,20 +53,68 @@ class WhatsAppService {
             carouselCards: [],
             location: {},
             attributes: {},
-         
           }
         );
-        console.log(
-          "sendMessage from whatsappServices",
-          sendWhatsappMessage.status
-        );
+
+        result.status = "sent";
+        result.responseCode = sendWhatsappMessage.status;
       } catch (error) {
         console.log("error from whatsAppservice", error);
       }
+      results.push(result);
 
       // console.log("sendMessage ", sendWhatsappMessage);cl
     }
+    return results;
   }
 }
 
 module.exports = WhatsAppService;
+
+// For directly form meta business
+// await axios.post(
+//   "https://graph.facebook.com/v18.0/YOUR_PHONE_NUMBER_ID/messages",
+//   {
+//     messaging_product: "whatsapp",
+//     to: formattedNumber,
+//     type: "template",
+//     template: {
+//       name: "ptm_report_template",
+//       language: {
+//         code: "en_US",
+//       },
+//       components: [
+//         {
+//           type: "body",
+//           parameters: [
+//             {
+//               type: "text",
+//               text: studentName,
+//             },
+//             {
+//               type: "text",
+//               text: "Example parameter 2",
+//             },
+//             // Add more parameters if your template needs them
+//           ],
+//         },
+//       ],
+//     },
+//   },
+//   {
+//     headers: {
+//       Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+//       "Content-Type": "application/json",
+//     },
+//   }
+// );
+
+// Whatsapp call for fast2sms
+// const sendMessage = await axios.get(
+//   `https://www.fast2sms.com/dev/whatsapp?authorization=${WHATSAPP_TOKEN}&message_id=${message_id}&numbers=${formattedNumber}&variables_values=${studentName}&media_url=${pdfUrl}`,
+//   {
+//     headers: {
+//       "Content-Type": "application/json",
+//     },
+//   }
+// );

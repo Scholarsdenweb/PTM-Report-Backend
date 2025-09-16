@@ -24,14 +24,10 @@ const reportCardSchema = new mongoose.Schema(
       type: Object,
       default: {
         father: {
-          number: null,
-          status: "not_sent",
           time: null,
           deliveryReport: null,
         },
         mother: {
-          number: null,
-          status: "not_sent",
           time: null,
           deliveryReport: null,
         },
@@ -42,3 +38,18 @@ const reportCardSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("Result", reportCardSchema);
+
+// default: {
+//       father: {
+//         number: null,
+//         status: "not_sent",
+//         time: null,
+//         deliveryReport: null,
+//       },
+//       mother: {
+//         number: null,
+//         status: "not_sent",
+//         time: null,
+//         deliveryReport: null,
+//       },
+//     },
