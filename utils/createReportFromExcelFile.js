@@ -123,7 +123,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
         // chem: `Result_${date}_Chemistry`,
         maths: `Result_${date}_Maths`,
         math: `Result_${date}_Math`,
-        bio: `Result_${date}_Bio`,
+        bio: row[`Result_${date}_Bio`] ? `Result_${date}_Bio` : `Result_${date}_Biology`,
         abs: `Result_${date}_Abs`,
         "Phy(10)": `Result_${date}_Phy(10)`,
         "Chem(10)": `Result_${date}_Chem(10)`,
@@ -150,9 +150,15 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
         const rankKey = `Result_${date}_Rank`;
         const totalKey = `Result_${date}_Total`;
         const altTotalKey = `Result_${date}_Tot`;
-        const highestKey = row[`Result_${date}_High`]
-          ? `Result_${date}_High`
-          : `Result_${date}_Highest_Marks`;
+        const highestKey =
+          row[`Result_${date}_High`] !== undefined
+            ? `Result_${date}_High`
+            : row[`Result_${date}_Highest_Marks`] !== undefined
+            ? `Result_${date}_Highest_Marks`
+            : row[`Result_${date}_Highest Marks`] !== undefined
+            ? `Result_${date}_Highest Marks`
+            : "-";
+
         // const highestKey = `Result_${date}_High` || `Result_${date}_Highest Marks`;
 
         entry.rank = row[rankKey] || "-";
@@ -174,7 +180,6 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
           .map((key) => key.split("_")[3])
       ),
     ];
-
 
     console.log("advDates", advDates);
     advDates.forEach((date) => {
@@ -229,13 +234,8 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       }
     });
 
-
     console.log("JEE MAIN", jeeMain);
     console.log("JEE ADV", jeeAdv);
-
-
-
-
 
     const boardResult = [];
 
@@ -262,6 +262,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
         const highestMarks =
           row[`Board_Result_${date}_Highest marks`] ||
           row[`Board_Result_${date}_Highest_Marks`] ||
+          row[`Board_Result_${date}_Highest Marks`] ||
           "-";
         const marksObtained = row[key] ?? "-";
 
@@ -379,7 +380,6 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       .trim()}`;
 
     const photoUrl = await findImageInCloudinaryFolder(imageName);
-
 
     console.log("PhotoUrl from createReportFormExcelFile", photoUrl);
     // const photoUrl = `${cloudinaryBase}/${imageName}.jpg`; // or .png if applicable

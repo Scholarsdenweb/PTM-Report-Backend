@@ -28,6 +28,7 @@ const reportCardSchema = new mongoose.Schema(
           deliveryReport: null,
         },
         mother: {
+         
           time: null,
           deliveryReport: null,
         },
