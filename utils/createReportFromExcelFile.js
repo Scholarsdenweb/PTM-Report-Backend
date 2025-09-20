@@ -123,7 +123,9 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
         // chem: `Result_${date}_Chemistry`,
         maths: `Result_${date}_Maths`,
         math: `Result_${date}_Math`,
-        bio: row[`Result_${date}_Bio`] ? `Result_${date}_Bio` : `Result_${date}_Biology`,
+        bio: row[`Result_${date}_Bio`]
+          ? `Result_${date}_Bio`
+          : `Result_${date}_Biology`,
         abs: `Result_${date}_Abs`,
         "Phy(10)": `Result_${date}_Phy(10)`,
         "Chem(10)": `Result_${date}_Chem(10)`,
@@ -380,7 +382,12 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       .toString()
       .trim()}`;
 
-    const photoUrl = await findImageInCloudinaryFolder(imageName);
+    // For fetch Image from cloudinary
+    // const photoUrl = await findImageInCloudinaryFolder(imageName);
+
+    console.log("image name", imageName);
+    // For take image from local storage
+    const photoUrl = `../assets/${imageName}.jpg`;
 
     console.log("PhotoUrl from createReportFormExcelFile", photoUrl);
     // const photoUrl = `${cloudinaryBase}/${imageName}.jpg`; // or .png if applicable
@@ -406,7 +413,8 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       batchStrength: row["Strength"],
       // photo : `../photographs/${row["Name"]}_${row["Roll No"]}`,
       // photo: "../assets/profileImg.png",
-      photo: photoUrl ? photoUrl : "../assets/profileImg.png",
+      photo: photoUrl,
+      // photo: photoUrl ? photoUrl : "../assets/profileImg.png",
       ptmDate: formatted,
       // photo: "../assets/student.png",
       headerImage: "../assets/headerImage.png",

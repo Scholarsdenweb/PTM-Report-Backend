@@ -38,6 +38,8 @@ const generatePerformanceReportPDF = async (data, filePath) => {
 
   const getImageAsBase64 = (imagePath) => {
     try {
+
+      console.log("IMagePath from gewtImageAsBase64", imagePath);
       console.log("get image path getImageAsBase64 ", imagePath);
       const logoPath = path.resolve(__dirname, imagePath);
       const logoBase64 = fs.readFileSync(logoPath, { encoding: "base64" });

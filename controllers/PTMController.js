@@ -53,6 +53,10 @@ class PTMController {
         );
 
         console.log("uploadedUrl", uploadedUrl);
+        
+        
+        
+        
         console.log("studentData", studentData);
 
         // Upsert student
