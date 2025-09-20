@@ -44,6 +44,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
 
       return `data:image/png;base64,${logoBase64}`;
     } catch (error) {
+      console.log("error form getimageAsBase64", error);
       return null;
     }
   };

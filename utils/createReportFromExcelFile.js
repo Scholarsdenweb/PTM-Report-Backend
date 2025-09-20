@@ -323,6 +323,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       { key: "Physics", label: "Physics" },
       { key: "Phy.Chem.", label: "Physical Chemistry" },
       { key: "Physical Chemistry", label: "Physical Chemistry" },
+      { key: "Physical_Chemistry", label: "Physical Chemistry" },
       { key: "Organic Chemistry", label: "Organic Chemistry" },
       { key: "Organic_Chemistry", label: "Organic Chemistry" },
       { key: "Inorg.Chem", label: "Inorganic Chemistry" },
