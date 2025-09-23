@@ -67,7 +67,7 @@ class PTMController {
             fatherName: studentData.fatherName,
             motherName: studentData.motherName,
             batch: studentData.batch,
-            photoUrl : studentData.photo.url,
+            photoUrl : studentData?.photo?.url,
             fatherContact:
               removeCommas(studentData.fatherContactNumber) || removeCommas(studentData.FATHER_CONTACT_NO),
             motherContact:

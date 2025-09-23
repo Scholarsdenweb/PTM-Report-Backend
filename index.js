@@ -56,6 +56,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/batches", batchRoutes);
 app.use("/api/students", studentRoutes);
 
+
 mongoose
   .connect(process.env.MONGODB_URI, {
     autoIndex: false,

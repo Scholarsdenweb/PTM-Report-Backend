@@ -383,11 +383,11 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       .trim()}`;
 
     // For fetch Image from cloudinary
-    // const photoUrl = await findImageInCloudinaryFolder(imageName);
+    const photoUrl = await findImageInCloudinaryFolder(imageName);
 
     console.log("image name", imageName);
     // For take image from local storage
-    const photoUrl = `../assets/${imageName}.jpg`;
+    // const photoUrl = `../assets/${imageName}.jpg`;
 
     console.log("PhotoUrl from createReportFormExcelFile", photoUrl);
     // const photoUrl = `${cloudinaryBase}/${imageName}.jpg`; // or .png if applicable
@@ -413,11 +413,12 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       batchStrength: row["Strength"],
       // photo : `../photographs/${row["Name"]}_${row["Roll No"]}`,
       // photo: "../assets/profileImg.png",
-      photo: photoUrl,
-      // photo: photoUrl ? photoUrl : "../assets/profileImg.png",
+      // photo: photoUrl,
+      photo: photoUrl ? photoUrl : "../assets/profileImg.png",
       ptmDate: formatted,
       // photo: "../assets/student.png",
       headerImage: "../assets/headerImage.png",
+      // headerImage: "../assets/StudentPerformanceReportHeader.png",
       subjectWiseData,
       jeeMain,
       jeeAdv,

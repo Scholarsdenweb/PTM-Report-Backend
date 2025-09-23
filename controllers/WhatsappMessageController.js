@@ -415,21 +415,21 @@ class WhatsappMessageController {
           continue;
         }
 
-        const mobileNumbers = [
-          student.fatherContact,
-          student.motherContact,
-        ].filter(Boolean);
+        // const mobileNumbers = [
+        //   student.fatherContact,
+        //   student.motherContact,
+        // ].filter(Boolean);
 
-        // const mobileNumbers = ["9719706242", "7037550621"];
+        const mobileNumbers = ["9719706242", "7037550621"];
 
         for (const report of reports) {
-
           console.log("Step 5 report details", report);
+          // console.log("Step 5 report details", report.sendStatus?.father?.deliveryReport);
           // Avoid duplicate sending
           const alreadySentFather =
-            report.sendStatus?.father?.status === "sent";
+            report.sendStatus?.father?.deliveryReport?.status === "sent";
           const alreadySentMother =
-            report.sendStatus?.mother?.status === "sent";
+            report.sendStatus?.mother?.deliveryReport?.status === "sent";
 
           if (alreadySentFather && alreadySentMother) {
             results.push({
@@ -476,7 +476,6 @@ class WhatsappMessageController {
           const motherResult = sendResults.find(
             (r) => r.number === `91${student.motherContact}`
           );
-         
 
           const updatedSendStatus = {
             father: {
@@ -494,13 +493,32 @@ class WhatsappMessageController {
           report.sendStatus = updatedSendStatus;
           await report.save();
 
+          const wasFatherSent = fatherResult?.status === "sent";
+          const wasMotherSent = motherResult?.status === "sent";
+
+          let status = "Failed";
+          if (wasFatherSent || wasMotherSent) {
+            status = "Partially Sent";
+          }
+          if (wasFatherSent && wasMotherSent) {
+            status = "Sent";
+          }
+
           results.push({
             student: student.name,
             reportId: report._id,
             mobile: mobileNumbers,
-            status: "Sent",
+            status,
             reportDate: report.reportDate,
           });
+
+          // results.push({
+          //   student: student.name,
+          //   reportId: report._id,
+          //   mobile: mobileNumbers,
+          //   status: "Sent",
+          //   reportDate: report.reportDate,
+          // });
         }
       }
 

@@ -166,6 +166,16 @@ router.post("/get-all-student-reports", async (req, res) => {
   }
 });
 
+
+
+router.post("/send-message-on-whatsapp", async (req, res) =>{
+  console.log("send-message-on-whatsapp ", req.body);
+} )
+
+
+
+
+
 router.delete("/delete/:rollNo", async (req, res) => {
   try {
     const { rollNo } = req.params;
