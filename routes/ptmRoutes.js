@@ -17,6 +17,7 @@ router.post('/send-whatsapp-message',  whatsappMessageConsoller.handleSend.bind(
 router.get("/admin/reports", authMiddleware, isAdmin, ptmController.getAllReports.bind(ptmController));
 
 
+router.post("/send-single-message-on-whatsapp", whatsappMessageConsoller.sendSingleMessage.bind(whatsappMessageConsoller) )
 
 
 // Debug route to confirm file received

@@ -535,6 +535,119 @@ class WhatsappMessageController {
         .json({ error: "Internal Server Error", details: err.message });
     }
   }
+
+  // async sendSingleMessage(req, res) {
+  //   const { rollNo, date } = req.body;
+
+  //   console.log("rollNo date from sendSingleMessage", rollNo, date);
+
+  //   const student = await Student.find({ rollNo });
+  //   const report = await Results.find({ rollNo, date });
+
+  //   console.log("findStudent from sendSingleMessage", findStudent);
+
+  //   console.log("findReport from sendSigleMessage ", findReport);
+  //   const fileName = report.secure_url.split("/").pop();
+
+  //   console.log("Data from sendResult function", [
+  //     mobileNumbers,
+  //     student.name,
+  //     report.secure_url,
+  //     fileName,
+  //   ]);
+
+  //   // const sendResults = await this.whatsAppService.sendReport(
+  //   //   mobileNumbers,
+  //   //   student.name,
+  //   //   report.secure_url,
+  //   //   fileName
+  //   // );
+
+  //   // console.log("sendResults from sendSingleMessaqge ", sendResults);
+  // }
+
+  async sendSingleMessage(req, res) {
+    try {
+      const { rollNo, date } = req.body;
+
+      console.log("rollNo and date from sendSingleMessage:", rollNo, date);
+
+      if (!rollNo || !date) {
+        return res.status(400).json({
+          message: "rollNo and date are required",
+        });
+      }
+
+      const student = await Student.findOne({ rollNo });
+
+      if (!student) {
+        return res.status(404).json({
+          message: "Student not found",
+        });
+      }
+
+      const reportDate = new Date(date);
+      const startOfDay = new Date(reportDate.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(reportDate.setHours(23, 59, 59, 999));
+
+      const report = await ReportCardModel.findOne({
+        student: student._id,
+        reportDate: {
+          $gte: startOfDay,
+          $lte: endOfDay,
+        },
+      });
+
+      console.log("report from sendSingleMessage", report);
+
+      if (!report) {
+        return res.status(404).json({
+          message: "Report not found for the given date",
+        });
+      }
+
+      const fileName = report.secure_url.split("/").pop();
+      console.log("report from sendSingleMessage", fileName);
+
+      const mobileNumbers = ["9719706242"].filter(Boolean);
+      // const mobileNumbers = [student.fatherContact, student.motherContact].filter(Boolean);
+
+      if (!mobileNumbers.length) {
+        return res.status(400).json({
+          message: "No contact numbers found for the student",
+        });
+      }
+
+      console.log("Sending report to:", {
+        mobileNumbers,
+        studentName: student.name,
+        secureUrl: report.secure_url,
+        fileName,
+      });
+
+      const sendResults = await this.whatsAppService.sendReport(
+        mobileNumbers,
+        student.name,
+        report.secure_url,
+        fileName
+      );
+
+      console.log("sendResults from sendSingleMessage:", sendResults);
+
+      return res.status(200).json({
+        message: "Report sent",
+        student: student.name,
+        reportId: report._id,
+        status: sendResults,
+      });
+    } catch (err) {
+      console.error("sendSingleMessage error:", err);
+      return res.status(500).json({
+        error: "Internal Server Error",
+        details: err.message,
+      });
+    }
+  }
 }
 
 module.exports = WhatsappMessageController;
