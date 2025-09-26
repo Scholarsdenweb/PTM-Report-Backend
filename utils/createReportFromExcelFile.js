@@ -103,14 +103,18 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
         Object.keys(row)
           .filter(
             (k) =>
-              k.startsWith("Result_") &&
+             ( k.startsWith("Result_") || k.startsWith("Objective_Pattern_")) &&
               /_Phy|_Chem|_Maths|Math|_Bio|_Abs|_Tot|_Total|_Eng|_Phy(10)|_Chem(10)|_Bio(10)|_Math(25)|_Eng(15)|_SST(30)|_Total(100)|_Total|_SST/.test(
                 k
               )
           )
-          .map((k) => k.split("_")[1])
+          .map((k) => k.split("_")[2])
+          // .map((k) => k.split("_")[1])
       ),
     ];
+
+
+    console.log("ResultDates from data ", resultDates);
 
     resultDates.forEach((date) => {
       const entry = { date };
@@ -127,14 +131,15 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
           ? `Result_${date}_Bio`
           : `Result_${date}_Biology`,
         abs: `Result_${date}_Abs`,
-        "Phy(10)": `Result_${date}_Phy(10)`,
-        "Chem(10)": `Result_${date}_Chem(10)`,
-        "Bio(10)": `Result_${date}_Bio(10)`,
-        "Maths(25)": `Result_${date}_Math(25)`,
-        "Eng(15)": `Result_${date}_Eng(15)`,
-        "SST(30)": `Result_${date}_SST(30)`,
-        "Total(100)": `Result_${date}_Total(100)`,
-        Total: `Result_${date}_Total`,
+        "Phy(10)": `Objective_Pattern_${date}_Phy(10)`,
+        "Chem(10)": `Objective_Pattern_${date}_Chem(10)`,
+        "Bio(10)": `Objective_Pattern_${date}_Bio(10)`,
+        "Maths(25)": `Objective_Pattern_${date}_Math(25)`,
+        "Eng(15)": `Objective_Pattern_${date}_Eng(15)`,
+        "SST(30)": `Objective_Pattern_${date}_SST(30)`,
+        "Highest Marks": `Objective_Pattern_${date}_Highest_Marks`,
+        "Total(100)": `Objective_Pattern_${date}_Total(120)`,
+        Total: `Objective_Pattern_${date}_Total`,
       };
 
       let hasValidSubject = false;
@@ -149,7 +154,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       }
 
       if (hasValidSubject) {
-        const rankKey = `Result_${date}_Rank`;
+        const rankKey =  row[`Result_${date}_Rank`] ? `Result_${date}_Rank` : row[`Objective_Pattern_${date}_Rank`] ? `Objective_Pattern_${date}_Rank` : "-";
         const totalKey = `Result_${date}_Total`;
         const altTotalKey = `Result_${date}_Tot`;
         const highestKey =
@@ -159,6 +164,10 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
             ? `Result_${date}_Highest_Marks`
             : row[`Result_${date}_Highest Marks`] !== undefined
             ? `Result_${date}_Highest Marks`
+            : row[`Result_${date}_Highest Marks`] !== undefined
+            ? `Result_${date}_Highest Marks`
+            : row[`Objective_Pattern_${date}_Highest_Marks`] !== undefined
+            ? `Objective_Pattern_${date}_Highest_Marks`
             : "-";
 
         // const highestKey = `Result_${date}_High` || `Result_${date}_Highest Marks`;
@@ -284,26 +293,27 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       ...new Set(
         Object.keys(row)
           .filter(
-            (key) => key.startsWith("SubjectiveResult_") && key.split("_")[1]
+            (key) => key.startsWith("Subjective_Pattern_") && key.split("_")[1]
           )
-          .map((key) => key.split("_")[1])
+          .map((key) => key.split("_")[2])
+          // .map((key) => key.split("_")[2])
       ),
     ];
 
     subjectiveDates.forEach((date) => {
-      const rankKey = `SubjectiveResult_${date}`;
+      const rankKey = `Subjective_Pattern_${date}_Rank`;
       const science = {
-        "Phy(14)": row[`SubjectiveResult_${date}_Phy(14)`] ?? "",
-        "Chem(13)": row[`SubjectiveResult_${date}_Chems(13)`] ?? "",
-        "Bio(13)": row[`SubjectiveResult_${date}_Bio(13)`] ?? "",
+        "Phy(14)": row[`Subjective_Pattern_${date}_Phy(14)`] ?? "",
+        "Chem(13)": row[`Subjective_Pattern_${date}_Chem(13)`] ?? "",
+        "Bio(13)": row[`Subjective_Pattern_${date}_Bio(13)`] ?? "",
         "ScienceTotal(40)":
-          row[`SubjectiveResult_${date}_ScienceTotal(40)`] ?? "",
+          row[`Subjective_Pattern_${date}_Total(40)`] ?? "",
       };
 
-      const maths = row[`SubjectiveResult_${date}_Math(20)`] ?? "";
+      const maths = row[`Subjective_Pattern_${date}_Maths(20)`] ?? "";
       const highest =
-        row[`SubjectiveResult_${date}_High`] ||
-        row[`SubjectiveResult_${date}_Highest Marks`];
+        row[`Subjective_Pattern_${date}_High`] ||
+        row[`Subjective_Pattern_${date}_Highest_Marks`];
 
       // Only push if at least one subject or total is present
       if (
@@ -342,9 +352,10 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
 
       { key: "Chemistry", label: "Chemistry" },
       { key: "Geography+Economics", label: "Geography + Economics" },
+      { key: "Geography", label: "Geography" },
       { key: "Economics", label: "Economics" },
       { key: "English", label: "English" },
-      { key: "History+Civics", label: "History + Civics" },
+      { key: "History & Civics", label: "History & Civics" },
       { key: "Total", label: "Total" },
     ];
     // Construct Cloudinary image URL based on name and roll number

@@ -332,7 +332,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
           <th>Phy(14)</th>
           <th>Chem(13)</th>
           <th>Bio(13)</th>
-          <th>Total(20)</th>
+          <th>Total(40)</th>
          
         </tr>
       </thead>
