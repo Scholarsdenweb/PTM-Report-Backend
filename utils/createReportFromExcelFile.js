@@ -93,6 +93,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       "Bio(10)": [],
       "Maths(25)": [],
       "Eng(15)": [],
+      "Eng(10)": [],
       "SST(30)": [],
       "Total(100)": [],
       Total: [],
@@ -103,16 +104,15 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
         Object.keys(row)
           .filter(
             (k) =>
-             ( k.startsWith("Result_") || k.startsWith("Objective_Pattern_")) &&
+              (k.startsWith("Result_") || k.startsWith("Objective_Pattern_")) &&
               /_Phy|_Chem|_Maths|Math|_Bio|_Abs|_Tot|_Total|_Eng|_Phy(10)|_Chem(10)|_Bio(10)|_Math(25)|_Eng(15)|_SST(30)|_Total(100)|_Total|_SST/.test(
                 k
               )
           )
           .map((k) => k.split("_")[2])
-          // .map((k) => k.split("_")[1])
+        // .map((k) => k.split("_")[1])
       ),
     ];
-
 
     console.log("ResultDates from data ", resultDates);
 
@@ -136,9 +136,11 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
         "Bio(10)": `Objective_Pattern_${date}_Bio(10)`,
         "Maths(25)": `Objective_Pattern_${date}_Math(25)`,
         "Eng(15)": `Objective_Pattern_${date}_Eng(15)`,
+        "Eng(10)": `Objective_Pattern_${date}_Eng(10)`,
         "SST(30)": `Objective_Pattern_${date}_SST(30)`,
         "Highest Marks": `Objective_Pattern_${date}_Highest_Marks`,
-        "Total(100)": `Objective_Pattern_${date}_Total(120)`,
+        "Total(100)": `Objective_Pattern_${date}_Total(100)`,
+        "Total(120)": `Objective_Pattern_${date}_Total(120)`,
         Total: `Objective_Pattern_${date}_Total`,
       };
 
@@ -154,7 +156,11 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       }
 
       if (hasValidSubject) {
-        const rankKey =  row[`Result_${date}_Rank`] ? `Result_${date}_Rank` : row[`Objective_Pattern_${date}_Rank`] ? `Objective_Pattern_${date}_Rank` : "-";
+        const rankKey = row[`Result_${date}_Rank`]
+          ? `Result_${date}_Rank`
+          : row[`Objective_Pattern_${date}_Rank`]
+          ? `Objective_Pattern_${date}_Rank`
+          : "-";
         const totalKey = `Result_${date}_Total`;
         const altTotalKey = `Result_${date}_Tot`;
         const highestKey =
@@ -296,7 +302,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
             (key) => key.startsWith("Subjective_Pattern_") && key.split("_")[1]
           )
           .map((key) => key.split("_")[2])
-          // .map((key) => key.split("_")[2])
+        // .map((key) => key.split("_")[2])
       ),
     ];
 
@@ -306,8 +312,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
         "Phy(14)": row[`Subjective_Pattern_${date}_Phy(14)`] ?? "",
         "Chem(13)": row[`Subjective_Pattern_${date}_Chem(13)`] ?? "",
         "Bio(13)": row[`Subjective_Pattern_${date}_Bio(13)`] ?? "",
-        "ScienceTotal(40)":
-          row[`Subjective_Pattern_${date}_Total(40)`] ?? "",
+        "ScienceTotal(40)": row[`Subjective_Pattern_${date}_Total(40)`] ?? "",
       };
 
       const maths = row[`Subjective_Pattern_${date}_Maths(20)`] ?? "";
@@ -365,6 +370,13 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       const discipline = row[`${key}_OD`];
       const attention = row[`${key}_CA`];
       const homework = row[`${key}_HW`];
+
+      if (key === "Total") {
+        console.log("Total fromfeedback response ", response);
+        console.log("Total fromfeedback   discipline ", discipline);
+        console.log("Total fromfeedback  attention  ", attention);
+        console.log("Total fromfeedback homework   ", homework);
+      }
 
       // Add feedback only if at least one field is present
       if (

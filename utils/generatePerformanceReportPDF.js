@@ -70,6 +70,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
     { key: "Bio(10)", label: "Bio(10)" },
     { key: "Maths(25)", label: "Maths(25)" },
     { key: "Eng(15)", label: "Eng(15)" },
+    { key: "Eng(10)", label: "Eng(10)" },
     { key: "SST(30)", label: "SST(30)" },
     { key: "Total(100)", label: "Total(100)" },
     { key: "Total", label: "Total" },
