@@ -220,7 +220,7 @@ const resultDates = [
       ...new Set(
         Object.keys(row)
           .filter(
-            (key) => key.startsWith("JEE_Advanced_Result_") && key.split("_")[3]
+            (key) => key.startsWith("JEE_ADV_Result") && key.split("_")[3]
           )
           .map((key) => key.split("_")[3])
       ),
@@ -228,13 +228,13 @@ const resultDates = [
 
     console.log("advDates", advDates);
     advDates.forEach((date) => {
-      const rankKey = `JEE_Advanced_Result_${date}_Rank`;
+      const rankKey = `JEE_ADV_Result_${date}_Rank`;
       // const rankKey = `JEE_Advanced_Result_${date}`;
       const paper1 = {
-        phy: row[`JEE_Advanced_Paper_1_Result_${date}_Phy`] ?? 0,
-        chem: row[`JEE_Advanced_Paper_1_Result_${date}_Chem`] ?? 0,
-        maths: row[`JEE_Advanced_Paper_1_Result_${date}_Math`] ?? 0,
-        total: row[`JEE_Advanced_Paper_1_Result_${date}_Total_Marks`] ?? 0,
+        phy: row[`JEE_ADV_Result_Paper 1_Result_${date}_Phy`] ?? 0,
+        chem: row[`JEE_ADV_Result_Paper 1_Result_${date}_Chem`] ?? 0,
+        maths: row[`JEE_ADV_Result_Paper 1_Result_${date}_Maths`] ?? 0,
+        total: row[`JEE_ADV_Result_Paper 1_Result_${date}_Total_Marks`] ?? 0,
       };
       // const paper1 = {
       //   phy: row[`JEE_Advanced_Result_${date}_P1`] ?? 0,
@@ -244,10 +244,10 @@ const resultDates = [
       // };
 
       const paper2 = {
-        phy: row[`JEE_Advanced_Paper_2_Result_${date}_Phy`] ?? 0,
-        chem: row[`JEE_Advanced_Paper_2_Result_${date}_Chem`] ?? 0,
-        maths: row[`JEE_Advanced_Paper_2_Result_${date}_Math`] ?? 0,
-        total: row[`JEE_Advanced_Paper_2_Result_${date}_Total_Marks`] ?? 0,
+        phy: row[`JEE_ADV_Result_Paper 2_Result_${date}_Phy`] ?? 0,
+        chem: row[`JEE_ADV_Result_Paper 2_Result_${date}_Chem`] ?? 0,
+        maths: row[`JEE_ADV_Result_Paper 2_Result_${date}_Maths`] ?? 0,
+        total: row[`JEE_ADV_Result_Paper 2_Result_${date}_Total_Marks`] ?? 0,
       };
       // const paper2 = {
       //   phy: row[`JEE_Advanced_Result_${date}_P2`] ?? 0,
@@ -256,10 +256,10 @@ const resultDates = [
       //   total: row[`JEE_Advanced_Result_${date}_T2`] ?? 0,
       // };
 
-      const total = row[`JEE_Advanced_Result_Grand_Total_${date}`] ?? 0;
+      const total = row[`JEE_ADV_Result_${date}_Grand_Total`] ?? 0;
       const highest =
-        row[`JEE_Advanced_Result_${date}_High`] ||
-        row[`JEE_Advanced_Result_${date}_Highest_Marks`];
+        row[`JEE_ADV_Result_${date}_High`] ||
+        row[`JEE_ADV_Result_${date}_Highest_Marks`];
 
       // Only push if at least one subject or total is present
       if (
