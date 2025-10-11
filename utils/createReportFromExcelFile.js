@@ -432,6 +432,9 @@ const resultDates = [
       .replace(/\s+/g, "_")}_${(row["Roll No"] || row["ROLL NO"] || "")
       .replace(/,/g, "")
       .toString()
+      .trim()}_${(row["Roll No"] || row["ROLL NO"] || "")
+      .replace(/,/g, "")
+      .toString()
       .trim()}`;
 
     // For fetch Image from cloudinary

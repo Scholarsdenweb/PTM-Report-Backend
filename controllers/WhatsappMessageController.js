@@ -440,7 +440,7 @@ class WhatsappMessageController {
             continue;
           }
 
-          const fileName = report.secure_url.split("/").pop();
+          const fileName = `${report.secure_url.split("/").pop()}`;
 
           console.log("Data from sendResult function", [
             mobileNumbers,
@@ -471,10 +471,10 @@ class WhatsappMessageController {
           //   (r) => r.number === `917037550621`
           // );
           const fatherResult = sendResults.find(
-            (r) => r.number === `91${student.fatherContact}` 
+            (r) => r.number === `91${student.fatherContact}`
           );
           const motherResult = sendResults.find(
-            (r) => r.number === `91${student.motherContact}` 
+            (r) => r.number === `91${student.motherContact}`
           );
 
           const updatedSendStatus = {
@@ -610,7 +610,10 @@ class WhatsappMessageController {
       console.log("report from sendSingleMessage", fileName);
 
       // const mobileNumbers = ["9719706242"].filter(Boolean);
-      const mobileNumbers = [student.fatherContact, student.motherContact].filter(Boolean);
+      const mobileNumbers = [
+        student.fatherContact,
+        student.motherContact,
+      ].filter(Boolean);
 
       if (!mobileNumbers.length) {
         return res.status(400).json({
