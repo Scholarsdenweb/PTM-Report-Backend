@@ -60,17 +60,17 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
     // Step 2: Build the attendance array
     monthSet.forEach((month) => {
       const present =
-        row[`Attendance_${month}_P`] || row[`Attendance_${month}__P`] || 0;
+        row[`Attendance_${month}_P`] || row[`Attendance_${month}__P`] || "-";
       const absent =
         row[`Attendance_${month}_A`] || row[`Attendance_${month}__A`] || "-";
       const percent =
         row[`Attendance_${month}_Per`] ||
         row[`Attendance_${month}_PER`] ||
-        row[`Attendance_${month}_per`];
+        row[`Attendance_${month}_per`] || "-";
 
       attendance.push({
         month,
-        held: row[`Attendance_${month}`],
+        held: row[`Attendance_${month}`] || "-",
         present,
         absent,
         percent: `${percent}`,
@@ -99,20 +99,42 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       Total: [],
     };
 
-    const resultDates = [
-      ...new Set(
-        Object.keys(row)
-          .filter(
-            (k) =>
-              (k.startsWith("Result_") || k.startsWith("Objective_Pattern_")) &&
-              /_Phy|_Chem|_Maths|Math|_Bio|_Abs|_Tot|_Total|_Eng|_Phy(10)|_Chem(10)|_Bio(10)|_Math(25)|_Eng(15)|_SST(30)|_Total(100)|_Total|_SST/.test(
-                k
-              )
-          )
-          // .map((k) => k.split("_")[2])
-          .map((k) => k.split("_")[1])
-      ),
-    ];
+    // const resultDates = [
+    //   ...new Set(
+    //     Object.keys(row)
+    //       .filter(
+    //         (k) =>
+    //           (k.startsWith("Result_") || k.startsWith("Objective_Pattern_")) &&
+    //           /_Phy|_Chem|_Maths|Math|_Bio|_Abs|_Tot|_Total|_Eng|_Phy(10)|_Chem(10)|_Bio(10)|_Math(25)|_Eng(15)|_SST(30)|_Total(100)|_Total|_SST/.test(
+    //             k
+    //           )
+    //       )
+    //       // .map((k) => k.split("_")[2])
+    //     .map((k) => k.split("_")[1])
+    //   ),
+    // ];
+
+
+
+const resultDates = [
+  ...new Set(
+    Object.keys(row).reduce((acc, k) => {
+      if (
+        (k.startsWith("Result_") || k.startsWith("Objective_Pattern_")) &&
+        /_Phy|_Chem|_Maths|Math|_Bio|_Abs|_Tot|_Total|_Eng|_Phy\(10\)|_Chem\(10\)|_Bio\(10\)|_Math\(25\)|_Eng\(15\)|_SST\(30\)|_Total\(100\)|_SST/.test(k)
+      ) {
+        let part = null;
+        if (k.startsWith("Result_")) {
+          part = k.split("_")[1]; // "Result_2024_Phy" → "2024"
+        } else if (k.startsWith("Objective_Pattern_")) {
+          part = k.split("_")[2]; // "Objective_Pattern_2024_Phy(10)" → "2024"
+        }
+        if (part) acc.push(part);
+      }
+      return acc;
+    }, [])
+  )
+];
 
     console.log("ResultDates from data ", resultDates);
 
@@ -123,7 +145,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       const subjectsMap = {
         phy: row[`Result_${date}_Physics`]
           ? `Result_${date}_Physics`
-          : `Result_${date}_Phy`,
+          : `Result_${date}_Phy`, 
         // phy: `Result_${date}_Physics`,
         chem: row[`Result_${date}_Chemistry`]
           ? `Result_${date}_Chemistry`
@@ -147,7 +169,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
         "Total(120)": `Objective_Pattern_${date}_Total(120)`,
         Total: row[`Result_${date}_Total`]
           ? `Result_${date}_Total`
-          : `Objective_Pattern_${date}_Total`,
+          : row[`Objective_Pattern_${date}_Total`] ? `Objective_Pattern_${date}_Total` : "-",
       };
 
       let hasValidSubject = false;
@@ -198,7 +220,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       ...new Set(
         Object.keys(row)
           .filter(
-            (key) => key.startsWith("JEE_Advanced_Result_") && key.split("_")[3]
+            (key) => key.startsWith("JEE_ADV_Result") && key.split("_")[3]
           )
           .map((key) => key.split("_")[3])
       ),
@@ -206,13 +228,13 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
 
     console.log("advDates", advDates);
     advDates.forEach((date) => {
-      const rankKey = `JEE_Advanced_Result_${date}_Rank`;
+      const rankKey = `JEE_ADV_Result_${date}_Rank`;
       // const rankKey = `JEE_Advanced_Result_${date}`;
       const paper1 = {
-        phy: row[`JEE_Advanced_Paper_1_Result_${date}_Phy`] ?? 0,
-        chem: row[`JEE_Advanced_Paper_1_Result_${date}_Chem`] ?? 0,
-        maths: row[`JEE_Advanced_Paper_1_Result_${date}_Math`] ?? 0,
-        total: row[`JEE_Advanced_Paper_1_Result_${date}_Total_Marks`] ?? 0,
+        phy: row[`JEE_ADV_Result_Paper 1_Result_${date}_Phy`] ?? 0,
+        chem: row[`JEE_ADV_Result_Paper 1_Result_${date}_Chem`] ?? 0,
+        maths: row[`JEE_ADV_Result_Paper 1_Result_${date}_Maths`] ?? 0,
+        total: row[`JEE_ADV_Result_Paper 1_Result_${date}_Total_Marks`] ?? 0,
       };
       // const paper1 = {
       //   phy: row[`JEE_Advanced_Result_${date}_P1`] ?? 0,
@@ -222,10 +244,10 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       // };
 
       const paper2 = {
-        phy: row[`JEE_Advanced_Paper_2_Result_${date}_Phy`] ?? 0,
-        chem: row[`JEE_Advanced_Paper_2_Result_${date}_Chem`] ?? 0,
-        maths: row[`JEE_Advanced_Paper_2_Result_${date}_Math`] ?? 0,
-        total: row[`JEE_Advanced_Paper_2_Result_${date}_Total_Marks`] ?? 0,
+        phy: row[`JEE_ADV_Result_Paper 2_Result_${date}_Phy`] ?? 0,
+        chem: row[`JEE_ADV_Result_Paper 2_Result_${date}_Chem`] ?? 0,
+        maths: row[`JEE_ADV_Result_Paper 2_Result_${date}_Maths`] ?? 0,
+        total: row[`JEE_ADV_Result_Paper 2_Result_${date}_Total_Marks`] ?? 0,
       };
       // const paper2 = {
       //   phy: row[`JEE_Advanced_Result_${date}_P2`] ?? 0,
@@ -234,10 +256,10 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       //   total: row[`JEE_Advanced_Result_${date}_T2`] ?? 0,
       // };
 
-      const total = row[`JEE_Advanced_Result_Grand_Total_${date}`] ?? 0;
+      const total = row[`JEE_ADV_Result_${date}_Grand_Total`] ?? 0;
       const highest =
-        row[`JEE_Advanced_Result_${date}_High`] ||
-        row[`JEE_Advanced_Result_${date}_Highest_Marks`];
+        row[`JEE_ADV_Result_${date}_High`] ||
+        row[`JEE_ADV_Result_${date}_Highest_Marks`];
 
       // Only push if at least one subject or total is present
       if (
@@ -350,7 +372,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       { key: "Organic Chemistry", label: "Organic Chemistry" },
       { key: "Organic_Chemistry", label: "Organic Chemistry" },
       { key: "Inorg.Chem", label: "Inorganic Chemistry" },
-      { key: "Inorganic_Chemistry", label: "Inorganic Chemistry" },
+      { key: "Inorg.Chem", label: "Inorganic Chemistry" },
       { key: "Inorganic Chemistry", label: "Inorganic Chemistry" },
       { key: "Inorg_Chemistry", label: "Inorganic Chemistry" },
       { key: "Org_Chemistry", label: "Organic Chemistry" },

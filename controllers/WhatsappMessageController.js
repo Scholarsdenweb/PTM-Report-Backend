@@ -415,12 +415,12 @@ class WhatsappMessageController {
           continue;
         }
 
-        // const mobileNumbers = [
-        //   student.fatherContact,
-        //   student.motherContact,
-        // ].filter(Boolean);
+        const mobileNumbers = [
+          student.fatherContact,
+          student.motherContact,
+        ].filter(Boolean);
 
-        const mobileNumbers = ["9719706242", "7037550621"];
+        // const mobileNumbers = ["9719706242", "7037550621"];
 
         for (const report of reports) {
           console.log("Step 5 report details", report);
@@ -471,10 +471,10 @@ class WhatsappMessageController {
           //   (r) => r.number === `917037550621`
           // );
           const fatherResult = sendResults.find(
-            (r) => r.number === `91${student.fatherContact}`
+            (r) => r.number === `91${student.fatherContact}` 
           );
           const motherResult = sendResults.find(
-            (r) => r.number === `91${student.motherContact}`
+            (r) => r.number === `91${student.motherContact}` 
           );
 
           const updatedSendStatus = {
@@ -609,8 +609,8 @@ class WhatsappMessageController {
       const fileName = report.secure_url.split("/").pop();
       console.log("report from sendSingleMessage", fileName);
 
-      const mobileNumbers = ["9719706242"].filter(Boolean);
-      // const mobileNumbers = [student.fatherContact, student.motherContact].filter(Boolean);
+      // const mobileNumbers = ["9719706242"].filter(Boolean);
+      const mobileNumbers = [student.fatherContact, student.motherContact].filter(Boolean);
 
       if (!mobileNumbers.length) {
         return res.status(400).json({
