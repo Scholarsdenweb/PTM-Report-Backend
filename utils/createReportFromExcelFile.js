@@ -109,8 +109,8 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
                 k
               )
           )
-          .map((k) => k.split("_")[2])
-        // .map((k) => k.split("_")[1])
+          // .map((k) => k.split("_")[2])
+          .map((k) => k.split("_")[1])
       ),
     ];
 
@@ -121,9 +121,13 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       subjectWiseData.labels.push(date);
 
       const subjectsMap = {
-        phy: `Result_${date}_Physics`,
+        phy: row[`Result_${date}_Physics`]
+          ? `Result_${date}_Physics`
+          : `Result_${date}_Phy`,
         // phy: `Result_${date}_Physics`,
-        chem: `Result_${date}_Chemistry`,
+        chem: row[`Result_${date}_Chemistry`]
+          ? `Result_${date}_Chemistry`
+          : `Result_${date}_Chem`,
         // chem: `Result_${date}_Chemistry`,
         maths: `Result_${date}_Maths`,
         math: `Result_${date}_Math`,
@@ -141,7 +145,9 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
         "Highest Marks": `Objective_Pattern_${date}_Highest_Marks`,
         "Total(100)": `Objective_Pattern_${date}_Total(100)`,
         "Total(120)": `Objective_Pattern_${date}_Total(120)`,
-        Total: `Objective_Pattern_${date}_Total`,
+        Total: row[`Result_${date}_Total`]
+          ? `Result_${date}_Total`
+          : `Objective_Pattern_${date}_Total`,
       };
 
       let hasValidSubject = false;
@@ -345,6 +351,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       { key: "Organic_Chemistry", label: "Organic Chemistry" },
       { key: "Inorg.Chem", label: "Inorganic Chemistry" },
       { key: "Inorganic_Chemistry", label: "Inorganic Chemistry" },
+      { key: "Inorganic Chemistry", label: "Inorganic Chemistry" },
       { key: "Inorg_Chemistry", label: "Inorganic Chemistry" },
       { key: "Org_Chemistry", label: "Organic Chemistry" },
 
@@ -367,7 +374,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
 
     const feedback = subjects.reduce((acc, { key, label }) => {
       const response = row[`${key}_CR`];
-      const discipline = row[`${key}_OD`];
+      const discipline = row[`${key}_D`];
       const attention = row[`${key}_CA`];
       const homework = row[`${key}_HW`];
 
