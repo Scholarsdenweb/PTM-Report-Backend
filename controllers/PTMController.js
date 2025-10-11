@@ -31,32 +31,32 @@ class PTMController {
         type
       ); // returns [{ studentData, reportPath }]
 
-
-      console.log("reportDateArray from handleArray", reportDataArray)
+      console.log("reportDateArray from handleArray", reportDataArray);
 
       const results = [];
 
       function removeCommas(input) {
-  if (typeof input !== 'string') {
-    input = String(input); // ensure it's a string
-  }
-  return input.replace(/,/g, '');
-}
+        if (typeof input !== "string") {
+          input = String(input); // ensure it's a string
+        }
+        return input.replace(/,/g, "");
+      }
 
       for (const data of reportDataArray) {
         const { studentData, reportPath } = data;
 
+        console.log("studentData from handleLoad", studentData);
+
         const uploadedUrl = await this.reportService.uploadReport(
           reportPath,
           studentData.name,
-          studentData.rollNo
+          studentData.rollNo,
+          studentData.ptmDate.split(" ")[0],
+          // studentData.results
         );
 
         console.log("uploadedUrl", uploadedUrl);
-        
-        
-        
-        
+
         console.log("studentData", studentData);
 
         // Upsert student
@@ -67,16 +67,16 @@ class PTMController {
             fatherName: studentData.fatherName,
             motherName: studentData.motherName,
             batch: studentData.batch,
-            photoUrl : studentData?.photo?.url,
+            photoUrl: studentData?.photo?.url,
             fatherContact:
-              removeCommas(studentData.fatherContactNumber) || removeCommas(studentData.FATHER_CONTACT_NO),
+              removeCommas(studentData.fatherContactNumber) ||
+              removeCommas(studentData.FATHER_CONTACT_NO),
             motherContact:
-              removeCommas(studentData.motherContactNumber) || removeCommas(studentData.MOTHER_CONTACT_NO),
+              removeCommas(studentData.motherContactNumber) ||
+              removeCommas(studentData.MOTHER_CONTACT_NO),
           },
           { upsert: true, new: true }
         );
-
-
 
         console.log("Student from handleUpload", student);
         // Create report document
@@ -84,7 +84,7 @@ class PTMController {
           student: student._id,
           public_id: uploadedUrl.public_id,
           secure_url: uploadedUrl.secure_url,
-          reportDate: ptmDate,
+          reportDate: studentData.ptmDate.split(" ")[0],
         });
 
         results.push({
@@ -182,8 +182,6 @@ class PTMController {
   //     res.status(500).json({ message: "Failed to fetch reports" });
   //   }
   // }
-
- 
 }
 
 module.exports = PTMController;
