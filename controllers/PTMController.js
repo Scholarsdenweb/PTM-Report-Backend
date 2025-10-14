@@ -51,7 +51,7 @@ class PTMController {
           reportPath,
           studentData.name,
           studentData.rollNo,
-          studentData.ptmDate.split(" ")[0],
+          studentData.ptmDate.split(" ")[0]
           // studentData.results
         );
 
@@ -79,13 +79,34 @@ class PTMController {
         );
 
         console.log("Student from handleUpload", student);
+        console.log("Student from handleUpload", studentData);
+        console.log(
+          "studentData.ptmDate.split",
+          studentData.ptmDate.split(" ")[0]
+        );
+        console.log(
+          "studentData.ptmDate.split",
+          new Date(studentData.ptmDate.split(" ")[0])
+        );
+        // const [dd, mm, yy] = studentData.ptmDate.split("-");
+        // const fullDate = new Date(`${dd}-${mm}-${yy}`); // e.g., "2025-10-11"
+
+        // console.log("fullDate from handleUpload", fullDate);
+
+
+        const [dd, mm, yy] = studentData.ptmDate.split("-");
+const fullYear = `20${yy}`; // Convert "25" → "2025"
+const fullDate = new Date(`${fullYear}-${mm}-${dd}T00:00:00Z`);
+
         // Create report document
-        await ReportCardModel.create({
+        const reportData = await ReportCardModel.create({
           student: student._id,
           public_id: uploadedUrl.public_id,
           secure_url: uploadedUrl.secure_url,
-          reportDate: studentData.ptmDate.split(" ")[0],
+          reportDate: fullDate,
         });
+
+        console.log("reportData", reportData);
 
         results.push({
           name: studentData.name,

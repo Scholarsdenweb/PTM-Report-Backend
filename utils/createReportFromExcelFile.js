@@ -21,20 +21,14 @@ dayjs.extend(weekday);
 dayjs.extend(localizedFormat);
 
 const createReportFromExcelFile = async (filePath, ptmDate, type) => {
-  console.log("filePath, ptmDate, type", filePath, ptmDate, type);
   const workbook = xlsx.readFile(filePath, { raw: true });
-
-  console.log("sheet from createReportFromExcelFile", workbook);
 
   // const workbook = xlsx.readFile(filePath, { raw: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  console.log("sheet from createReportFromExcelFile", sheet);
   const rows = xlsx.utils.sheet_to_json(sheet, {
     raw: false,
     defval: "",
   });
-
-  console.log("sheet from createReportFromExcelFile", rows);
 
   const outputDir = path.join(__dirname, "reports");
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
@@ -43,8 +37,6 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
 
   // Extract student data row by row
   const parseReportData = async (row) => {
-    console.log("row from parseReportData", row);
-
     const attendance = [];
 
     const monthSet = new Set();
@@ -66,7 +58,8 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       const percent =
         row[`Attendance_${month}_Per`] ||
         row[`Attendance_${month}_PER`] ||
-        row[`Attendance_${month}_per`] || "-";
+        row[`Attendance_${month}_per`] ||
+        "-";
 
       attendance.push({
         month,
@@ -114,29 +107,27 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
     //   ),
     // ];
 
-
-
-const resultDates = [
-  ...new Set(
-    Object.keys(row).reduce((acc, k) => {
-      if (
-        (k.startsWith("Result_") || k.startsWith("Objective_Pattern_")) &&
-        /_Phy|_Chem|_Maths|Math|_Bio|_Abs|_Tot|_Total|_Eng|_Phy\(10\)|_Chem\(10\)|_Bio\(10\)|_Math\(25\)|_Eng\(15\)|_SST\(30\)|_Total\(100\)|_SST/.test(k)
-      ) {
-        let part = null;
-        if (k.startsWith("Result_")) {
-          part = k.split("_")[1]; // "Result_2024_Phy" → "2024"
-        } else if (k.startsWith("Objective_Pattern_")) {
-          part = k.split("_")[2]; // "Objective_Pattern_2024_Phy(10)" → "2024"
-        }
-        if (part) acc.push(part);
-      }
-      return acc;
-    }, [])
-  )
-];
-
-    console.log("ResultDates from data ", resultDates);
+    const resultDates = [
+      ...new Set(
+        Object.keys(row).reduce((acc, k) => {
+          if (
+            (k.startsWith("Result_") || k.startsWith("Objective_Pattern_")) &&
+            /_Phy|_Chem|_Maths|Math|_Bio|_Abs|_Tot|_Total|_Eng|_Phy\(10\)|_Chem\(10\)|_Bio\(10\)|_Math\(25\)|_Eng\(15\)|_SST\(30\)|_Total\(100\)|_SST/.test(
+              k
+            )
+          ) {
+            let part = null;
+            if (k.startsWith("Result_")) {
+              part = k.split("_")[1]; // "Result_2024_Phy" → "2024"
+            } else if (k.startsWith("Objective_Pattern_")) {
+              part = k.split("_")[2]; // "Objective_Pattern_2024_Phy(10)" → "2024"
+            }
+            if (part) acc.push(part);
+          }
+          return acc;
+        }, [])
+      ),
+    ];
 
     resultDates.forEach((date) => {
       const entry = { date };
@@ -145,7 +136,7 @@ const resultDates = [
       const subjectsMap = {
         phy: row[`Result_${date}_Physics`]
           ? `Result_${date}_Physics`
-          : `Result_${date}_Phy`, 
+          : `Result_${date}_Phy`,
         // phy: `Result_${date}_Physics`,
         chem: row[`Result_${date}_Chemistry`]
           ? `Result_${date}_Chemistry`
@@ -169,7 +160,9 @@ const resultDates = [
         "Total(120)": `Objective_Pattern_${date}_Total(120)`,
         Total: row[`Result_${date}_Total`]
           ? `Result_${date}_Total`
-          : row[`Objective_Pattern_${date}_Total`] ? `Objective_Pattern_${date}_Total` : "-",
+          : row[`Objective_Pattern_${date}_Total`]
+          ? `Objective_Pattern_${date}_Total`
+          : "-",
       };
 
       let hasValidSubject = false;
@@ -226,7 +219,6 @@ const resultDates = [
       ),
     ];
 
-    console.log("advDates", advDates);
     advDates.forEach((date) => {
       const rankKey = `JEE_ADV_Result_${date}_Rank`;
       // const rankKey = `JEE_Advanced_Result_${date}`;
@@ -278,9 +270,6 @@ const resultDates = [
         });
       }
     });
-
-    console.log("JEE MAIN", jeeMain);
-    console.log("JEE ADV", jeeAdv);
 
     const boardResult = [];
 
@@ -401,10 +390,6 @@ const resultDates = [
       const homework = row[`${key}_HW`];
 
       if (key === "Total") {
-        console.log("Total fromfeedback response ", response);
-        console.log("Total fromfeedback   discipline ", discipline);
-        console.log("Total fromfeedback  attention  ", attention);
-        console.log("Total fromfeedback homework   ", homework);
       }
 
       // Add feedback only if at least one field is present
@@ -432,9 +417,6 @@ const resultDates = [
       .replace(/\s+/g, "_")}_${(row["Roll No"] || row["ROLL NO"] || "")
       .replace(/,/g, "")
       .toString()
-      .trim()}_${(row["Roll No"] || row["ROLL NO"] || "")
-      .replace(/,/g, "")
-      .toString()
       .trim()}`;
 
     // For fetch Image from cloudinary
@@ -447,9 +429,9 @@ const resultDates = [
     console.log("PhotoUrl from createReportFormExcelFile", photoUrl);
     // const photoUrl = `${cloudinaryBase}/${imageName}.jpg`; // or .png if applicable
 
-    const formatted = dayjs(ptmDate).format("DD-MM-YY dddd"); // 'dddd' = full day name
+    const formatted = dayjs(ptmDate).format("DD-MM-YY"); // 'dddd' = full day name
 
-    console.log("photoUrl imageUrl cloudinaryBase", photoUrl, imageName);
+    console.log("Formatted date", formatted);
 
     return {
       name: row["NAME"] || row["Name"] || row["Student Name"] || "Unnamed",

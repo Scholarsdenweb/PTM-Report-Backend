@@ -8,8 +8,8 @@ const studentSchema = new mongoose.Schema(
     batch: String,
     fatherName: String,
     motherName: String,
-    fatherContact: String,
-    motherContact: String,
+    fatherContact: {type : String, unique : true},
+    motherContact: {type : String, unique : true},
   },
   { timestamps: true }
 );
