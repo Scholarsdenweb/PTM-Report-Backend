@@ -15,8 +15,8 @@ app.use(cookieParser());
 
 // List of allowed frontends for CORS
 const allowedOrigins = [
-  "http://localhost:5173", // local frontend
-  "http://localhost:3000", // another possible local frontend
+  // "http://localhost:4000", // local frontend
+  // "http://localhost:3000", // another possible local frontend
   "https://ptmreport.scholarsden.in" // your production frontend
 ];
 
