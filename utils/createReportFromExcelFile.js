@@ -3,6 +3,9 @@ const path = require("path");
 const xlsx = require("xlsx");
 const generatePerformanceReportPDF = require("./generatePerformanceReportPDF");
 
+const StudentModel = require("../models/Student.js");
+const ReportCardModel = require("../models/ReportCard.js");
+
 require("dotenv").config();
 
 // const cloud_name = process.env.CLOUDINARY_CLOUD_NAME;
@@ -15,12 +18,19 @@ const weekday = require("dayjs/plugin/weekday");
 const localizedFormat = require("dayjs/plugin/localizedFormat");
 const { checkIfReportCardExists } = require("./checkIfReportCardExists.js");
 const { deleteOldAndGenerateNew } = require("./deleteOldAndGenerateNew.js");
+const { removeFileFormServer } = require("./removeFileFormServer.js");
 require("dayjs/locale/en");
 
 dayjs.extend(weekday);
 dayjs.extend(localizedFormat);
 
-const createReportFromExcelFile = async (filePath, ptmDate, type) => {
+const createReportFromExcelFile = async (
+  filePath,
+  ptmDate,
+  type,
+  reportService,
+  res
+) => {
   const workbook = xlsx.readFile(filePath, { raw: true });
 
   // const workbook = xlsx.readFile(filePath, { raw: true });
@@ -427,6 +437,7 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
     // const photoUrl = `../assets/${imageName}.jpg`;
 
     console.log("PhotoUrl from createReportFormExcelFile", photoUrl);
+
     // const photoUrl = `${cloudinaryBase}/${imageName}.jpg`; // or .png if applicable
 
     const formatted = dayjs(ptmDate).format("DD-MM-YY"); // 'dddd' = full day name
@@ -444,14 +455,23 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
       batch: row["BATCH"] || row["Batch"] || "",
       motherName: row["M_N"] || row["Mother Name"] || "",
       fatherName: row["F_N"] || row["Father Name"] || "",
-      fatherContactNumber: row["Father Contact No."] || row["Father Contact No"],
-      motherContactNumber: row["Mother Contact No."] || row["Mother Contact No"],
-      studentContactNumber: row["Students Contact No."],
-      batchStrength: row["Strength"],
+      fatherContactNumber:
+        row["Father Contact No."] ||
+        row["Father Contact No"] ||
+        row["StudentContactNo"],
+      motherContactNumber:
+        row["Mother Contact No."] ||
+        row["Mother Contact No"] ||
+        row["FatherContactNo"],
+      studentContactNumber:
+        row["Student Contact No."] ||
+        row["Student Contact No"] ||
+        row["StudentContactNo"],
+      batchStrength: row["Strength"] || row["STRENGTH"],
       // photo : `../photographs/${row["Name"]}_${row["Roll No"]}`,
       // photo: "../assets/profileImg.png",
       // photo: photoUrl,
-      photo: photoUrl ? photoUrl : "../assets/profileImg.png",
+      photo: StudendtExist ? StudendtExist.photoUrl :( photoUrl ? photoUrl : "../assets/profileImg.png"),
       ptmDate: formatted,
       // photo: "../assets/student.png",
       headerImage: "../assets/headerImage.png",
@@ -493,8 +513,21 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
   }
 
   console.log("Generating reports...");
+
+  function removeCommas(input) {
+    if (typeof input !== "string") {
+      input = String(input); // ensure it's a string
+    }
+    return input.replace(/,/g, "");
+  }
+
   for (const row of rows) {
     const studentData = await parseReportData(row);
+    console.log("StudendtExist row[Roll No] ", row["Roll No"]);
+    
+    const stduentExist = await StudentModel.findOne({ rollNo: removeCommas(row["Roll No"]) });
+
+    console.log("StudendtExist ", stduentExist);
 
     const { exists, report } = await checkIfReportCardExists(
       row["Roll No"]?.replace(/,/g, ""),
@@ -519,13 +552,106 @@ const createReportFromExcelFile = async (filePath, ptmDate, type) => {
     try {
       await generatePerformanceReportPDF(studentData, reportPath);
 
-      reportResults.push({ studentData, reportPath });
+      // const { studentData, reportPath } = data;
+
+      // console.log("studentData from handleLoad", studentData, reportPath);
+
+      const uploadedUrl = await reportService.uploadReport(
+        reportPath,
+        studentData.name,
+        studentData.rollNo,
+        studentData.ptmDate.split(" ")[0]
+        // studentData.results
+      );
+
+      console.log("uploadedUrl", uploadedUrl);
+
+      console.log("studentData", studentData);
+
+      // Upsert student
+      let student = await StudentModel.findOneAndUpdate(
+        { rollNo: studentData.rollNo },
+        {
+          name: studentData.name,
+          fatherName: studentData.fatherName,
+          motherName: studentData.motherName,
+          batch: studentData.batch,
+          photoUrl: studentData?.photo?.url,
+          fatherContact:
+            removeCommas(studentData.fatherContactNumber) ||
+            removeCommas(studentData.FATHER_CONTACT_NO),
+          motherContact:
+            removeCommas(studentData.motherContactNumber) ||
+            removeCommas(studentData.MOTHER_CONTACT_NO),
+        },
+        { upsert: true, new: true }
+      );
+
+      console.log("Student from handleUpload", student);
+      console.log("Student from handleUpload", studentData);
+      console.log(
+        "studentData.ptmDate.split",
+        studentData.ptmDate.split(" ")[0]
+      );
+      console.log(
+        "studentData.ptmDate.split",
+        new Date(studentData.ptmDate.split(" ")[0])
+      );
+      // const [dd, mm, yy] = studentData.ptmDate.split("-");
+      // const fullDate = new Date(`${dd}-${mm}-${yy}`); // e.g., "2025-10-11"
+
+      // console.log("fullDate from handleUpload", fullDate);
+
+      const [dd, mm, yy] = studentData.ptmDate.split("-");
+      const fullYear = `20${yy}`; // Convert "25" → "2025"
+      const fullDate = new Date(`${fullYear}-${mm}-${dd}T00:00:00Z`);
+
+      // Create report document
+      const reportData = await ReportCardModel.create({
+        student: student._id,
+        public_id: uploadedUrl.public_id,
+        secure_url: uploadedUrl.secure_url,
+        reportDate: fullDate,
+      });
+
+      console.log("reportData", reportData);
+
+      // results.push({
+      //   name: studentData.name,
+      //   rollNo: studentData.rollNo,
+      //   cloudinaryUrl: uploadedUrl,
+      // });
+
+      await removeFileFormServer(reportPath);
+      // const mobile = studentData.FATHER_CONTACT_NO || studentData.MOTHER_CONTACT_NO;
+      // const name = studentData.NAME;
+
+      // if (mobile) {
+      //   await this.whatsAppService.sendReport(mobile, name, uploadedUrl);
+      // }
+
+      // reportResults.push({ studentData, reportPath });
+
+      // res.status(200).json({data : {
+      //    name: studentData.name,
+      //     rollNo: studentData.rollNo,
+      //     cloudinaryUrl: uploadedUrl,
+      // }})
+
+      reportResults.push({
+        name: studentData.name,
+        rollNo: studentData.rollNo,
+        cloudinaryUrl: uploadedUrl,
+      });
 
       console.log(`✅ PDF generated: ${fileName}`);
     } catch (err) {
       console.log(`❌ Error for ${studentData.name}: ${err}`);
     }
   }
+
+  console.log("ReportResult from createReportFromExcelFile", reportResults);
+
   return reportResults;
 };
 

@@ -10,11 +10,11 @@ const chromium = require("@sparticuz/chromium-min");
 require("dotenv").config();
 
 const generatePerformanceReportPDF = async (data, filePath) => {
-  console.log("data form generatePerformanceReportPDF", data);
-  console.log("data.photo form generatePerformanceReportPDF", data.photo);
+  // console.log("data form generatePerformanceReportPDF", data);
+  // console.log("data.photo form generatePerformanceReportPDF", data.photo);
 
   function convertScoreToPerformance(score) {
-    console.log("Score from convertScoreToPerformance", score);
+    // console.log("Score from convertScoreToPerformance", score);
     if (score >= 9 && score <= 10) {
       return "Excellent";
     } else if (score >= 7 && score < 9) {
@@ -27,10 +27,10 @@ const generatePerformanceReportPDF = async (data, filePath) => {
   }
 
   function evaluateScores(total, length) {
-    console.log("Total evaluateScores", total, length);
+    // console.log("Total evaluateScores", total, length);
     const average = total / length;
 
-    console.log("average from evaluateScores", average);
+    // console.log("average from evaluateScores", average);
     const performance = convertScoreToPerformance(average);
 
     return performance;
@@ -39,8 +39,8 @@ const generatePerformanceReportPDF = async (data, filePath) => {
   const getImageAsBase64 = (imagePath) => {
     try {
 
-      console.log("IMagePath from gewtImageAsBase64", imagePath);
-      console.log("get image path getImageAsBase64 ", imagePath);
+      // console.log("IMagePath from gewtImageAsBase64", imagePath);
+      // console.log("get image path getImageAsBase64 ", imagePath);
       const logoPath = path.resolve(__dirname, imagePath);
       const logoBase64 = fs.readFileSync(logoPath, { encoding: "base64" });
 
@@ -51,9 +51,9 @@ const generatePerformanceReportPDF = async (data, filePath) => {
     }
   };
 
-  console.log("data form generatePerformanceReportPDF", data);
-  console.log("Student Data stringify: ", JSON.stringify(data.subjectWiseData));
-  console.log("Student Data: ", data.subjectWiseData);
+  // console.log("data form generatePerformanceReportPDF", data);
+  // console.log("Student Data stringify: ", JSON.stringify(data.subjectWiseData));
+  // console.log("Student Data: ", data.subjectWiseData);
 
   // 1. Get all available subjects from jeeMain data
   const allPossibleSubjects = [
@@ -132,7 +132,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
 `;
   const boardResultData = data?.boardResult || [];
 
-  console.log("boardResultData from console", boardResultData);
+  // console.log("boardResultData from console", boardResultData);
 
   const boardResultRow = boardResultData
     .map(
@@ -148,7 +148,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
     )
     .join("");
 
-  console.log("BoardResultRow from console", boardResultRow);
+  // console.log("BoardResultRow from console", boardResultRow);
 
   // 3. Build the dynamic table rows
   const jeeMainRows = data?.jeeMain
@@ -346,7 +346,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
   }
 
   let showTable = "";
-  console.log("subject3Label", subject3Label);
+  // console.log("subject3Label", subject3Label);
   if (subject3Label === "Math") {
     showTable = jeeAdvancedTable;
   } else if (subject3Label === "Phy(10)") {

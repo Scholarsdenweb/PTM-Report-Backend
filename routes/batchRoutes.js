@@ -870,4 +870,39 @@ router.post("/fetchDataByRollNo", async (req, res) => {
   console.log("FIndStudentDetails", findStudentDetails);
 });
 
+
+
+router.post("/changeBatchName", async (req, res) => {
+  try {
+    const { currentBatch, newBatchName } = req.body;
+
+    if (!currentBatch || !newBatchName) {
+      return res.status(400).json({ message: "Both currentBatch and newBatchName are required." });
+    }
+
+    const result = await StudentModel.updateMany(
+      { batch: currentBatch },          // filter
+      { $set: { batch: newBatchName } } // update operation
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ message: "No students found with the given batch name." });
+    }
+
+    res.json({
+      message: `Batch name updated successfully from '${currentBatch}' to '${newBatchName}'.`,
+      matched: result.matchedCount,
+      modified: result.modifiedCount
+    });
+  } catch (error) {
+    console.error("Error changing batch name:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+
+
+
+
+
 module.exports = router;

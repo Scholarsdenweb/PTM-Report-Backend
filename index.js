@@ -16,21 +16,24 @@ app.use(cookieParser());
 // List of allowed frontends for CORS
 const allowedOrigins = [
   // "http://localhost:4000", // local frontend
-  // "http://localhost:3000", // another possible local frontend
-  "https://ptmreport.scholarsden.in" // your production frontend
+  "http://localhost:5173",
+  "http://localhost:3000", // another possible local frontend
+  "https://ptmreport.scholarsden.in", // your production frontend
 ];
 
-app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
 
 // CORS headers for preflight/OPTIONS requests (recommended fallback)
 app.use((req, res, next) => {
@@ -55,6 +58,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/batches", batchRoutes);
 app.use("/api/students", studentRoutes);
+
 
 
 mongoose
