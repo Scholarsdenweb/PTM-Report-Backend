@@ -26,8 +26,8 @@ class ReportService {
     const sanitizedRollNumber = rollNumber
       .toString()
       .replace(/[^a-z0-9_\-]/gi, "_");
-    const uniqueFileName = `${sanitizedStudentName}_${sanitizedRollNumber}`;
-    // const uniqueFileName = `${sanitizedStudentName}_${sanitizedRollNumber}_${ptmDate}`;
+    // const uniqueFileName = `${sanitizedStudentName}_${sanitizedRollNumber}`;
+    const uniqueFileName = `${sanitizedStudentName}_${sanitizedRollNumber}_${ptmDate}`;
 
     const uploadOptions = {
       folder: "PTM_Document/PTM_Report",

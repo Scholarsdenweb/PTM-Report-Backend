@@ -46,7 +46,10 @@ const createReportFromExcelFile = async (
   const reportResults = [];
 
   // Extract student data row by row
-  const parseReportData = async (row) => {
+  const parseReportData = async (row, studentExist) => {
+
+
+    console.log("Student Exist details ", studentExist);
     const attendance = [];
 
     const monthSet = new Set();
@@ -471,7 +474,7 @@ const createReportFromExcelFile = async (
       // photo : `../photographs/${row["Name"]}_${row["Roll No"]}`,
       // photo: "../assets/profileImg.png",
       // photo: photoUrl,
-      photo: StudendtExist ? StudendtExist.photoUrl :( photoUrl ? photoUrl : "../assets/profileImg.png"),
+      photo: studentExist ? studentExist.photoUrl :( photoUrl ? photoUrl.url : { url : "../assets/profileImg.png"}),
       ptmDate: formatted,
       // photo: "../assets/student.png",
       headerImage: "../assets/headerImage.png",
@@ -522,12 +525,12 @@ const createReportFromExcelFile = async (
   }
 
   for (const row of rows) {
-    const studentData = await parseReportData(row);
-    console.log("StudendtExist row[Roll No] ", row["Roll No"]);
+    const studentExist = await StudentModel.findOne({ rollNo: removeCommas(row["Roll No"]) });
+    const studentData = await parseReportData(row, studentExist);
+    console.log("studentExist row[Roll No] ", row["Roll No"]);
     
-    const stduentExist = await StudentModel.findOne({ rollNo: removeCommas(row["Roll No"]) });
 
-    console.log("StudendtExist ", stduentExist);
+    console.log("studentExist ", studentExist);
 
     const { exists, report } = await checkIfReportCardExists(
       row["Roll No"]?.replace(/,/g, ""),

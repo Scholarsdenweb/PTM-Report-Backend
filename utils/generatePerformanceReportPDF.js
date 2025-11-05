@@ -10,8 +10,8 @@ const chromium = require("@sparticuz/chromium-min");
 require("dotenv").config();
 
 const generatePerformanceReportPDF = async (data, filePath) => {
-  // console.log("data form generatePerformanceReportPDF", data);
-  // console.log("data.photo form generatePerformanceReportPDF", data.photo);
+  console.log("data form generatePerformanceReportPDF", data);
+  console.log("data.photo form generatePerformanceReportPDF", data.photo);
 
   function convertScoreToPerformance(score) {
     // console.log("Score from convertScoreToPerformance", score);
@@ -592,7 +592,7 @@ table {
       <div class="student-info">
         <div class="photo-section">
           <img src="${
-            data?.photo?.url || getImageAsBase64(data.photo)
+            data?.photo || getImageAsBase64(data.photo?.url)
           }" alt="Student Photo" />
           <p><strong>Name:</strong> ${data.name}</p>
           <p><strong>Roll No.:</strong> ${data.rollNo}</p>
