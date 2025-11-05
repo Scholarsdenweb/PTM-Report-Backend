@@ -24,16 +24,193 @@ require("dayjs/locale/en");
 dayjs.extend(weekday);
 dayjs.extend(localizedFormat);
 
+// const createReportFromExcelFile = async (
+//   filePath,
+//   ptmDate,
+//   type,
+//   reportService,
+//   res
+// ) => {
+//   const workbook = xlsx.readFile(filePath, { raw: true });
+
+//   // const workbook = xlsx.readFile(filePath, { raw: true });
+//   const sheet = workbook.Sheets[workbook.SheetNames[0]];
+//   const rows = xlsx.utils.sheet_to_json(sheet, {
+//     raw: false,
+//     defval: "",
+//   });
+
+//   const outputDir = path.join(__dirname, "reports");
+//   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
+
+//   const reportResults = [];
+
+//   // Extract student data row by row
+
+//   // Output directory
+
+//   // Generate PDFs
+
+//   const rollNoCounts = new Map();
+
+//   // Count occurrences of each Roll No
+//   for (const row of rows) {
+//     const rollNo = row["Roll No"];
+//     if (!rollNo) continue;
+
+//     const count = rollNoCounts.get(rollNo) || 0;
+//     rollNoCounts.set(rollNo, count + 1);
+//   }
+
+//   // Detect duplicates
+//   const duplicateRollNos = [...rollNoCounts.entries()]
+//     .filter(([_, count]) => count > 1)
+//     .map(([rollNo]) => rollNo);
+
+//   if (duplicateRollNos.length > 0) {
+//     throw new Error(
+//       `❌ Duplicate Roll No found: ${duplicateRollNos.join(", ")}`
+//     );
+//   }
+
+//   console.log("Generating reports...");
+
+//   function removeCommas(input) {
+//     if (typeof input !== "string") {
+//       input = String(input); // ensure it's a string
+//     }
+//     return input.replace(/,/g, "");
+//   }
+
+//   for (const row of rows) {
+//     const studentExist = await StudentModel.findOne({ rollNo: removeCommas(row["Roll No"]) });
+//     const studentData = await parseReportData(row, studentExist);
+//     console.log("studentExist row[Roll No] ", row["Roll No"]);
+
+//     console.log("studentExist ", studentExist);
+
+//     const { exists, report } = await checkIfReportCardExists(
+//       row["Roll No"]?.replace(/,/g, ""),
+//       ptmDate
+//     );
+
+//     console.log("exists, report", exists, report);
+
+//     if (exists && type === "generate") {
+//       console.log("exists from parseReportData", exists);
+//       continue;
+//     } else if (exists && type === "regenerate") {
+//       console.log("EXISTS REPORT", exists, report);
+//       const data = await deleteOldAndGenerateNew(ptmDate, studentData.rollNo);
+
+//       console.log("data from createReportFromExcelFile", data);
+//     }
+//     const safeName = (studentData.name || "Student").replace(/\s+/g, "_");
+//     const fileName = `${safeName}_${studentData.rollNo}.pdf`;
+//     const reportPath = path.join(outputDir, fileName);
+
+//     try {
+//       await generatePerformanceReportPDF(studentData, reportPath);
+
+//       // const { studentData, reportPath } = data;
+
+//       // console.log("studentData from handleLoad", studentData, reportPath);
+
+//       const uploadedUrl = await reportService.uploadReport(
+//         reportPath,
+//         studentData.name,
+//         studentData.rollNo,
+//         studentData.ptmDate.split(" ")[0]
+//         // studentData.results
+//       );
+
+//       console.log("uploadedUrl", uploadedUrl);
+
+//       console.log("studentData", studentData);
+
+//       // Upsert student
+//       let student = await StudentModel.findOneAndUpdate(
+//         { rollNo: studentData.rollNo },
+//         {
+//           name: studentData.name,
+//           fatherName: studentData.fatherName,
+//           motherName: studentData.motherName,
+//           batch: studentData.batch,
+//           photoUrl: studentData?.photo?.url,
+//           fatherContact:
+//             removeCommas(studentData.fatherContactNumber) ||
+//             removeCommas(studentData.FATHER_CONTACT_NO),
+//           motherContact:
+//             removeCommas(studentData.motherContactNumber) ||
+//             removeCommas(studentData.MOTHER_CONTACT_NO),
+//         },
+//         { upsert: true, new: true }
+//       );
+
+//       console.log("Student from handleUpload", student);
+//       console.log("Student from handleUpload", studentData);
+//       console.log(
+//         "studentData.ptmDate.split",
+//         studentData.ptmDate.split(" ")[0]
+//       );
+//       console.log(
+//         "studentData.ptmDate.split",
+//         new Date(studentData.ptmDate.split(" ")[0])
+//       );
+//       // const [dd, mm, yy] = studentData.ptmDate.split("-");
+//       // const fullDate = new Date(`${dd}-${mm}-${yy}`); // e.g., "2025-10-11"
+
+//       // console.log("fullDate from handleUpload", fullDate);
+
+//       const [dd, mm, yy] = studentData.ptmDate.split("-");
+//       const fullYear = `20${yy}`; // Convert "25" → "2025"
+//       const fullDate = new Date(`${fullYear}-${mm}-${dd}T00:00:00Z`);
+
+//       // Create report document
+//       const reportData = await ReportCardModel.create({
+//         student: student._id,
+//         public_id: uploadedUrl.public_id,
+//         secure_url: uploadedUrl.secure_url,
+//         reportDate: fullDate,
+//       });
+
+//       console.log("reportData", reportData);
+
+//       // results.push({
+//       //   name: studentData.name,
+//       //   rollNo: studentData.rollNo,
+//       //   cloudinaryUrl: uploadedUrl,
+//       // });
+
+//       await removeFileFormServer(reportPath);
+
+//       reportResults.push({
+//         name: studentData.name,
+//         rollNo: studentData.rollNo,
+//         cloudinaryUrl: uploadedUrl,
+//       });
+
+//       console.log(`✅ PDF generated: ${fileName}`);
+//     } catch (err) {
+//       console.log(`❌ Error for ${studentData.name}: ${err}`);
+//     }
+//   }
+
+//   console.log("ReportResult from createReportFromExcelFile", reportResults);
+
+//   return reportResults;
+// };
+
+// module.exports = createReportFromExcelFile;
+
 const createReportFromExcelFile = async (
   filePath,
   ptmDate,
   type,
   reportService,
-  res
+  res // Pass the response object for streaming
 ) => {
   const workbook = xlsx.readFile(filePath, { raw: true });
-
-  // const workbook = xlsx.readFile(filePath, { raw: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = xlsx.utils.sheet_to_json(sheet, {
     raw: false,
@@ -45,10 +222,46 @@ const createReportFromExcelFile = async (
 
   const reportResults = [];
 
-  // Extract student data row by row
+  // Helper function to send progress updates
+  const sendProgress = (data) => {
+    if (res && !res.writableEnded) {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    }
+  };
+
+  // Validation and duplicate check...
+  const rollNoCounts = new Map();
+  for (const row of rows) {
+    const rollNo = row["Roll No"];
+    if (!rollNo) continue;
+    const count = rollNoCounts.get(rollNo) || 0;
+    rollNoCounts.set(rollNo, count + 1);
+  }
+
+  const duplicateRollNos = [...rollNoCounts.entries()]
+    .filter(([_, count]) => count > 1)
+    .map(([rollNo]) => rollNo);
+
+  if (duplicateRollNos.length > 0) {
+    throw new Error(
+      `❌ Duplicate Roll No found: ${duplicateRollNos.join(", ")}`
+    );
+  }
+
+  const totalStudents = rows.length;
+  let processedCount = 0;
+  let successCount = 0;
+  let errorCount = 0;
+  let skippedCount = 0;
+
+  // Send initial progress
+  sendProgress({
+    type: "start",
+    total: totalStudents,
+    message: "Starting report generation...",
+  });
+
   const parseReportData = async (row, studentExist) => {
-
-
     console.log("Student Exist details ", studentExist);
     const attendance = [];
 
@@ -474,7 +687,11 @@ const createReportFromExcelFile = async (
       // photo : `../photographs/${row["Name"]}_${row["Roll No"]}`,
       // photo: "../assets/profileImg.png",
       // photo: photoUrl,
-      photo: studentExist ? studentExist.photoUrl :( photoUrl ? photoUrl.url : { url : "../assets/profileImg.png"}),
+      photo: studentExist
+        ? studentExist.photoUrl
+        : photoUrl
+        ? photoUrl.url
+        : { url: "../assets/profileImg.png" },
       ptmDate: formatted,
       // photo: "../assets/student.png",
       headerImage: "../assets/headerImage.png",
@@ -489,87 +706,68 @@ const createReportFromExcelFile = async (
     };
   };
 
-  // Output directory
-
-  // Generate PDFs
-
-  const rollNoCounts = new Map();
-
-  // Count occurrences of each Roll No
-  for (const row of rows) {
-    const rollNo = row["Roll No"];
-    if (!rollNo) continue;
-
-    const count = rollNoCounts.get(rollNo) || 0;
-    rollNoCounts.set(rollNo, count + 1);
-  }
-
-  // Detect duplicates
-  const duplicateRollNos = [...rollNoCounts.entries()]
-    .filter(([_, count]) => count > 1)
-    .map(([rollNo]) => rollNo);
-
-  if (duplicateRollNos.length > 0) {
-    throw new Error(
-      `❌ Duplicate Roll No found: ${duplicateRollNos.join(", ")}`
-    );
-  }
-
-  console.log("Generating reports...");
-
   function removeCommas(input) {
     if (typeof input !== "string") {
-      input = String(input); // ensure it's a string
+      input = String(input);
     }
     return input.replace(/,/g, "");
   }
 
   for (const row of rows) {
-    const studentExist = await StudentModel.findOne({ rollNo: removeCommas(row["Roll No"]) });
-    const studentData = await parseReportData(row, studentExist);
-    console.log("studentExist row[Roll No] ", row["Roll No"]);
-    
-
-    console.log("studentExist ", studentExist);
-
-    const { exists, report } = await checkIfReportCardExists(
-      row["Roll No"]?.replace(/,/g, ""),
-      ptmDate
-    );
-
-    console.log("exists, report", exists, report);
-
-    if (exists && type === "generate") {
-      console.log("exists from parseReportData", exists);
-      continue;
-    } else if (exists && type === "regenerate") {
-      console.log("EXISTS REPORT", exists, report);
-      const data = await deleteOldAndGenerateNew(ptmDate, studentData.rollNo);
-
-      console.log("data from createReportFromExcelFile", data);
-    }
-    const safeName = (studentData.name || "Student").replace(/\s+/g, "_");
-    const fileName = `${safeName}_${studentData.rollNo}.pdf`;
-    const reportPath = path.join(outputDir, fileName);
+    const studentRollNo = removeCommas(row["Roll No"]);
+    const studentName =
+      row["NAME"] || row["Name"] || row["Student Name"] || "Unnamed";
 
     try {
+      sendProgress({
+        type: "processing",
+        current: processedCount + 1,
+        total: totalStudents,
+        percentage: Math.round(((processedCount + 1) / totalStudents) * 100),
+        studentName: studentName,
+        rollNo: studentRollNo,
+        message: `Processing ${studentName} (${studentRollNo})...`,
+      });
+
+      const studentExist = await StudentModel.findOne({
+        rollNo: studentRollNo,
+      });
+      const studentData = await parseReportData(row, studentExist);
+
+      const { exists, report } = await checkIfReportCardExists(
+        studentRollNo,
+        ptmDate
+      );
+
+      if (exists && type === "generate") {
+        skippedCount++;
+        sendProgress({
+          type: "skipped",
+          current: processedCount + 1,
+          total: totalStudents,
+          percentage: Math.round(((processedCount + 1) / totalStudents) * 100),
+          studentName: studentName,
+          rollNo: studentRollNo,
+          message: `Skipped ${studentName} - Report already exists`,
+        });
+        processedCount++;
+        continue;
+      } else if (exists && type === "regenerate") {
+        await deleteOldAndGenerateNew(ptmDate, studentData.rollNo);
+      }
+
+      const safeName = (studentData.name || "Student").replace(/\s+/g, "_");
+      const fileName = `${safeName}_${studentData.rollNo}.pdf`;
+      const reportPath = path.join(outputDir, fileName);
+
       await generatePerformanceReportPDF(studentData, reportPath);
-
-      // const { studentData, reportPath } = data;
-
-      // console.log("studentData from handleLoad", studentData, reportPath);
 
       const uploadedUrl = await reportService.uploadReport(
         reportPath,
         studentData.name,
         studentData.rollNo,
         studentData.ptmDate.split(" ")[0]
-        // studentData.results
       );
-
-      console.log("uploadedUrl", uploadedUrl);
-
-      console.log("studentData", studentData);
 
       // Upsert student
       let student = await StudentModel.findOneAndUpdate(
@@ -590,26 +788,10 @@ const createReportFromExcelFile = async (
         { upsert: true, new: true }
       );
 
-      console.log("Student from handleUpload", student);
-      console.log("Student from handleUpload", studentData);
-      console.log(
-        "studentData.ptmDate.split",
-        studentData.ptmDate.split(" ")[0]
-      );
-      console.log(
-        "studentData.ptmDate.split",
-        new Date(studentData.ptmDate.split(" ")[0])
-      );
-      // const [dd, mm, yy] = studentData.ptmDate.split("-");
-      // const fullDate = new Date(`${dd}-${mm}-${yy}`); // e.g., "2025-10-11"
-
-      // console.log("fullDate from handleUpload", fullDate);
-
       const [dd, mm, yy] = studentData.ptmDate.split("-");
-      const fullYear = `20${yy}`; // Convert "25" → "2025"
+      const fullYear = `20${yy}`;
       const fullDate = new Date(`${fullYear}-${mm}-${dd}T00:00:00Z`);
 
-      // Create report document
       const reportData = await ReportCardModel.create({
         student: student._id,
         public_id: uploadedUrl.public_id,
@@ -617,43 +799,51 @@ const createReportFromExcelFile = async (
         reportDate: fullDate,
       });
 
-      console.log("reportData", reportData);
-
-      // results.push({
-      //   name: studentData.name,
-      //   rollNo: studentData.rollNo,
-      //   cloudinaryUrl: uploadedUrl,
-      // });
-
       await removeFileFormServer(reportPath);
-      // const mobile = studentData.FATHER_CONTACT_NO || studentData.MOTHER_CONTACT_NO;
-      // const name = studentData.NAME;
 
-      // if (mobile) {
-      //   await this.whatsAppService.sendReport(mobile, name, uploadedUrl);
-      // }
-
-      // reportResults.push({ studentData, reportPath });
-
-      // res.status(200).json({data : {
-      //    name: studentData.name,
-      //     rollNo: studentData.rollNo,
-      //     cloudinaryUrl: uploadedUrl,
-      // }})
-
+      successCount++;
       reportResults.push({
         name: studentData.name,
         rollNo: studentData.rollNo,
         cloudinaryUrl: uploadedUrl,
       });
 
-      console.log(`✅ PDF generated: ${fileName}`);
+      sendProgress({
+        type: "success",
+        current: processedCount + 1,
+        total: totalStudents,
+        percentage: Math.round(((processedCount + 1) / totalStudents) * 100),
+        studentName: studentName,
+        rollNo: studentRollNo,
+        message: `✅ Generated report for ${studentName}`,
+      });
     } catch (err) {
-      console.log(`❌ Error for ${studentData.name}: ${err}`);
+      errorCount++;
+      sendProgress({
+        type: "error",
+        current: processedCount + 1,
+        total: totalStudents,
+        percentage: Math.round(((processedCount + 1) / totalStudents) * 100),
+        studentName: studentName,
+        rollNo: studentRollNo,
+        message: `❌ Error for ${studentName}: ${err.message}`,
+        error: err.message,
+      });
     }
+
+    processedCount++;
   }
 
-  console.log("ReportResult from createReportFromExcelFile", reportResults);
+  // Send completion summary
+  sendProgress({
+    type: "complete",
+    total: totalStudents,
+    processed: processedCount,
+    success: successCount,
+    errors: errorCount,
+    skipped: skippedCount,
+    message: `Completed! ${successCount} reports generated, ${errorCount} errors, ${skippedCount} skipped.`,
+  });
 
   return reportResults;
 };

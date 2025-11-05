@@ -24,6 +24,11 @@ class PTMController {
       const filePath = req?.file?.path; // Excel file path from multer
       const { ptmDate, type } = req.body;
 
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.flushHeaders();
+
       console.log("filePath", filePath, ptmDate);
       const reportDataArray = await createReportFromExcelFile(
         filePath,
@@ -35,100 +40,21 @@ class PTMController {
 
       console.log("reportDateArray from handleArray", reportDataArray);
 
-      // const results = [];
-
-      // function removeCommas(input) {
-      //   if (typeof input !== "string") {
-      //     input = String(input); // ensure it's a string
-      //   }
-      //   return input.replace(/,/g, "");
-      // }
-
-      // for (const data of reportDataArray) {
-      //   const { studentData, reportPath } = data;
-
-      //   console.log("studentData from handleLoad", studentData);
-
-      //   const uploadedUrl = await this.reportService.uploadReport(
-      //     reportPath,
-      //     studentData.name,
-      //     studentData.rollNo,
-      //     studentData.ptmDate.split(" ")[0]
-      //     // studentData.results
-      //   );
-
-      //   console.log("uploadedUrl", uploadedUrl);
-
-      //   console.log("studentData", studentData);
-
-      //   // Upsert student
-      //   let student = await StudentModel.findOneAndUpdate(
-      //     { rollNo: studentData.rollNo },
-      //     {
-      //       name: studentData.name,
-      //       fatherName: studentData.fatherName,
-      //       motherName: studentData.motherName,
-      //       batch: studentData.batch,
-      //       photoUrl: studentData?.photo?.url,
-      //       fatherContact:
-      //         removeCommas(studentData.fatherContactNumber) ||
-      //         removeCommas(studentData.FATHER_CONTACT_NO),
-      //       motherContact:
-      //         removeCommas(studentData.motherContactNumber) ||
-      //         removeCommas(studentData.MOTHER_CONTACT_NO),
-      //     },
-      //     { upsert: true, new: true }
-      //   );
-
-      //   console.log("Student from handleUpload", student);
-      //   console.log("Student from handleUpload", studentData);
-      //   console.log("studentData.ptmDate.split",studentData.ptmDate.split(" ")[0]);
-      //   console.log(
-      //     "studentData.ptmDate.split",
-      //     new Date(studentData.ptmDate.split(" ")[0])
-      //   );
-      //   // const [dd, mm, yy] = studentData.ptmDate.split("-");
-      //   // const fullDate = new Date(`${dd}-${mm}-${yy}`); // e.g., "2025-10-11"
-
-      //   // console.log("fullDate from handleUpload", fullDate);
-
-      //   const [dd, mm, yy] = studentData.ptmDate.split("-");
-      //   const fullYear = `20${yy}`; // Convert "25" → "2025"
-      //   const fullDate = new Date(`${fullYear}-${mm}-${dd}T00:00:00Z`);
-
-      //   // Create report document
-      //   const reportData = await ReportCardModel.create({
-      //     student: student._id,
-      //     public_id: uploadedUrl.public_id,
-      //     secure_url: uploadedUrl.secure_url,
-      //     reportDate: fullDate,
-      //   });
-
-      //   console.log("reportData", reportData);
-
-       
-
-      //   await removeFileFormServer(reportPath);
-      //   // const mobile = studentData.FATHER_CONTACT_NO || studentData.MOTHER_CONTACT_NO;
-      //   // const name = studentData.NAME;
-
-      //   // if (mobile) {
-      //   //   await this.whatsAppService.sendReport(mobile, name, uploadedUrl);
-      //   // }
-      // }
-
-      // await removeFileFormServer(filePath);
-
-
-
-
-      res.status(200).json({
-        message: "Reports generated successfully",
-        results : reportDataArray,
-      });
-    } catch (err) {
-      console.error("Error in PTMController:", err);
-      res.status(500).json({ err });
+      // res.status(200).json({
+      //   message: "Reports generated successfully",
+      //   results: reportDataArray,
+      // });
+      res.end();
+    } catch (error) {
+      if (!res.writableEnded) {
+        res.write(
+          `data: ${JSON.stringify({
+            type: "error",
+            message: error.message,
+          })}\n\n`
+        );
+        res.end();
+      }
     }
   }
 
