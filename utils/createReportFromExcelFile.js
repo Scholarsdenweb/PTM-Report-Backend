@@ -525,9 +525,11 @@ const sendProgress = (data) => {
       // photo : `../photographs/${row["Name"]}_${row["Roll No"]}`,
       // photo: "../assets/profileImg.png",
       // photo: photoUrl,
-      photo: studentExist
-        ? studentExist.photoUrl
-        : photoUrl
+      photo: 
+      // studentExist
+      //   ? studentExist.photoUrl
+      //   : 
+        photoUrl
         ? photoUrl.url
         : { url: "../assets/profileImg.png" },
       ptmDate: formatted,

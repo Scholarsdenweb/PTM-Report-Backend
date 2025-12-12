@@ -704,6 +704,8 @@ async sendSingleMessage(req, res) {
             report.sendStatus?.mother?.deliveryReport?.status === "sent";
         
         if (alreadySentFather && alreadySentMother) {
+
+          console.log("Report already sent to both parents for student:", student.name);
             return res.status(200).json({
                 message: "Report already sent to both parents",
                 student: student.name,
@@ -736,7 +738,7 @@ async sendSingleMessage(req, res) {
         console.log("Before sending report via WhatsApp service", student);
         
         const sendResults = await this.whatsAppService.sendReport(
-            mobileNumbers,
+            ["9719706242"],
             student.name,
             report.secure_url,
             fileName
