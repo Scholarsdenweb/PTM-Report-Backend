@@ -38,7 +38,6 @@ const generatePerformanceReportPDF = async (data, filePath) => {
 
   const getImageAsBase64 = (imagePath) => {
     try {
-
       // console.log("IMagePath from gewtImageAsBase64", imagePath);
       // console.log("get image path getImageAsBase64 ", imagePath);
       const logoPath = path.resolve(__dirname, imagePath);
@@ -73,6 +72,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
     { key: "Eng(10)", label: "Eng(10)" },
     { key: "SST(30)", label: "SST(30)" },
     { key: "Total(100)", label: "Total(100)" },
+    { key: "Total(120)", label: "Total(120)" },
     { key: "Total", label: "Total" },
   ];
 
@@ -300,12 +300,12 @@ const generatePerformanceReportPDF = async (data, filePath) => {
             <td>${row.date}</td>
             <td>${row.rank}</td>
 
-            <td>${row.science[`Phy(14)`]}</td>
-            <td>${row.science["Chem(13)"]}</td>
-            <td>${row.science["Bio(13)"]}</td>
-            <td>${row.science["ScienceTotal(40)"]}</td>
-          
+            <td>${row.science[`Phy(14)`] ? row.science[`Phy(14)`] : row.science[`Phy(29)`] }</td>
+            <td>${row.science["Chem(13)"] ? row.science["Chem(13)"] : row.science["Chem(26)"]}</td>
+            <td>${row.science["Bio(13)"] ? row.science["Bio(13)"] : row.science["Bio(25)"]}</td>
+            <td>${row.science["ScienceTotal(40)"] ? row.science["ScienceTotal(40)"] : row.science["ScienceTotal(80)"]}</td>
             <td>${row.maths}</td>
+            <td>${row.english}</td>
             <td>${row.highest}</td>
        
         </tr>`
@@ -326,15 +326,16 @@ const generatePerformanceReportPDF = async (data, filePath) => {
           <th rowspan="2">Date</th>
           <th rowspan="2">Rank</th>
           <th colspan="4">Science</th>
-          <th rowspan="2">Maths(20)</th>
+          <th rowspan="2">Maths(20)/Maths(80)</th>
+          <th rowspan="2">English(40)</th>
           <th rowspan="2">Highest</th>
         </tr>
         <tr>
-          <th>Phy(14)</th>
-          <th>Chem(13)</th>
-          <th>Bio(13)</th>
-          <th>Total(40)</th>
-         
+          <th>${data?.subjecttivePattern[0].science[`Phy(14)`] ? "Phy(14)" :  "Phy(29)" }</th>
+          <th>${data?.subjecttivePattern[0].science[`Chem(13)`] ? "Chem(13)" :  "Chem(26)" }</th>
+          <th>${data?.subjecttivePattern[0].science[`Bio(13)`] ? "Bio(13)" :  "Bio(25)" }</th>
+          <th>${data?.subjecttivePattern[0].science[`Total(40)`] ? "Total(40)" :  "Total(80)" }</th>
+
         </tr>
       </thead>
       <tbody>

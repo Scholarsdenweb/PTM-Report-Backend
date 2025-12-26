@@ -153,6 +153,7 @@ const sendProgress = (data) => {
       "Eng(10)": [],
       "SST(30)": [],
       "Total(100)": [],
+      "Total(120)": [],
       Total: [],
     };
 
@@ -246,7 +247,7 @@ const sendProgress = (data) => {
           : row[`Objective_Pattern_${date}_Rank`]
           ? `Objective_Pattern_${date}_Rank`
           : "-";
-        const totalKey = `Result_${date}_Total`;
+        const totalKey = `Result_${date}_Total(120)` || `Result_${date}_Total`;
         const altTotalKey = `Result_${date}_Tot`;
         const highestKey =
           row[`Result_${date}_High`] !== undefined
@@ -388,15 +389,22 @@ const sendProgress = (data) => {
     ];
 
     subjectiveDates.forEach((date) => {
-      const rankKey = `Subjective_Pattern_${date}_Rank`;
+      console.log("Subjective data  ", row);
+
+     const rankKey = `Subjective_Pattern_${date}_Rank`;
       const science = {
         "Phy(14)": row[`Subjective_Pattern_${date}_Phy(14)`] ?? "",
+        "Phy(29)": row[`Subjective_Pattern_${date}_Phy(29)`] ?? "",
         "Chem(13)": row[`Subjective_Pattern_${date}_Chem(13)`] ?? "",
+        "Chem(26)": row[`Subjective_Pattern_${date}_Chem(26)`] ?? "",
         "Bio(13)": row[`Subjective_Pattern_${date}_Bio(13)`] ?? "",
+        "Bio(25)": row[`Subjective_Pattern_${date}_Bio(25)`] ?? "",
         "ScienceTotal(40)": row[`Subjective_Pattern_${date}_Total(40)`] ?? "",
+        "ScienceTotal(80)": row[`Subjective_Pattern_${date}_Total(80)`] ?? "",
       };
 
-      const maths = row[`Subjective_Pattern_${date}_Maths(20)`] ?? "";
+      const maths = row[`Subjective_Pattern_${date}_Maths(20)`] ?? row[`Subjective_Pattern_${date}_Maths(80)`] ?? "";
+      const english = row[`Subjective_Pattern_${date}_English(40)`] ?? "";
       const highest =
         row[`Subjective_Pattern_${date}_High`] ||
         row[`Subjective_Pattern_${date}_Highest_Marks`];
@@ -412,6 +420,7 @@ const sendProgress = (data) => {
           rank: row[rankKey] || "",
           science,
           maths,
+          english,
           highest,
         });
       }
