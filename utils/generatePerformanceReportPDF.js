@@ -87,7 +87,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
     <th>Date</th>
     <th>Rank</th>
     ${availableSubjects.map((sub) => `<th>${sub.label}</th>`).join("")}
-    <th>Highest</th>
+    <th>Highest Marks</th>
   </tr>
 `;
 
@@ -270,7 +270,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
           <th colspan="4">Paper-1</th>
           <th colspan="4">Paper-2</th>
           <th rowspan="2">Grand Total</th>
-          <th rowspan="2">Highest</th>
+          <th rowspan="2">Highest Marks</th>
         </tr>
         <tr>
           <th>Phy</th>
@@ -300,13 +300,13 @@ const generatePerformanceReportPDF = async (data, filePath) => {
             <td>${row.date}</td>
             <td>${row.rank}</td>
 
-            <td>${row.science[`Phy(14)`] ? row.science[`Phy(14)`] : row.science[`Phy(29)`] }</td>
-            <td>${row.science["Chem(13)"] ? row.science["Chem(13)"] : row.science["Chem(26)"]}</td>
-            <td>${row.science["Bio(13)"] ? row.science["Bio(13)"] : row.science["Bio(25)"]}</td>
-            <td>${row.science["ScienceTotal(40)"] ? row.science["ScienceTotal(40)"] : row.science["ScienceTotal(80)"]}</td>
-            <td>${row.maths}</td>
-            <td>${row.english}</td>
-            <td>${row.highest}</td>
+            <td>${row.science[`Phy(14)`] ? row.science[`Phy(14)`] : row.science[`Phy(29)`] ?  row.science[`Phy(29)`] : "-"  }</td>
+            <td>${row.science["Chem(13)"] ? row.science["Chem(13)"] : row.science["Chem(26)"] ? row.science["Chem(26)"] : "-"}</td>
+            <td>${row.science["Bio(13)"] ? row.science["Bio(13)"] : row.science["Bio(25)"] ?  row.science["Bio(25)"] : "-"}</td>
+            <td>${row.science["ScienceTotal(40)"] ? row.science["ScienceTotal(40)"] : row.science["ScienceTotal(80)"] ? row.science["ScienceTotal(80)"] : "-"}</td>
+            <td>${row.maths ? row.maths : "-"}</td>
+            <td>${row.english ? row.english : "-"}</td>
+            <td>${row.highest ? row.highest : "-"}</td>
        
         </tr>`
     )
@@ -328,13 +328,13 @@ const generatePerformanceReportPDF = async (data, filePath) => {
           <th colspan="4">Science</th>
           <th rowspan="2">Maths(20)/Maths(80)</th>
           <th rowspan="2">English(40)</th>
-          <th rowspan="2">Highest</th>
+          <th rowspan="2">Highest Marks</th>
         </tr>
         <tr>
-          <th>${data?.subjecttivePattern[0].science[`Phy(14)`] ? "Phy(14)" :  "Phy(29)" }</th>
-          <th>${data?.subjecttivePattern[0].science[`Chem(13)`] ? "Chem(13)" :  "Chem(26)" }</th>
-          <th>${data?.subjecttivePattern[0].science[`Bio(13)`] ? "Bio(13)" :  "Bio(25)" }</th>
-          <th>${data?.subjecttivePattern[0].science[`Total(40)`] ? "Total(40)" :  "Total(80)" }</th>
+          <th> Phy(14)/Phy(29) </th>
+          <th> Chem(13)/Chem(26)</th>
+          <th> Bio(13)/Bio(25)</th>
+          <th>Total(40)/Total(80)</th>
 
         </tr>
       </thead>

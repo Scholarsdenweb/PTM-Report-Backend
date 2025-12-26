@@ -405,6 +405,7 @@ const sendProgress = (data) => {
 
       const maths = row[`Subjective_Pattern_${date}_Maths(20)`] ?? row[`Subjective_Pattern_${date}_Maths(80)`] ?? "";
       const english = row[`Subjective_Pattern_${date}_English(40)`] ?? "";
+      // const sst = row[`Subjective_Pattern_${date}_SST(80)`] ?? "";
       const highest =
         row[`Subjective_Pattern_${date}_High`] ||
         row[`Subjective_Pattern_${date}_Highest_Marks`];
@@ -421,6 +422,7 @@ const sendProgress = (data) => {
           science,
           maths,
           english,
+          // sst,
           highest,
         });
       }
