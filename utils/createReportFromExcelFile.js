@@ -196,6 +196,8 @@ const sendProgress = (data) => {
 
     resultDates.forEach((date) => {
       const entry = { date };
+
+      console.log("Date from resultDates", date);
       subjectWiseData.labels.push(date);
 
       const subjectsMap = {
@@ -404,8 +406,8 @@ const sendProgress = (data) => {
       };
 
       const maths = row[`Subjective_Pattern_${date}_Maths(20)`] ?? row[`Subjective_Pattern_${date}_Maths(80)`] ?? "";
-      const english = row[`Subjective_Pattern_${date}_English(40)`] ?? "";
-      // const sst = row[`Subjective_Pattern_${date}_SST(80)`] ?? "";
+      const english = row[`Subjective_Pattern_${date}_English(40)`] ?? row[`Subjective_Pattern_${date}_English(50)`] ?? "";
+      const sst = row[`Subjective_Pattern_${date}_SST(80)`] ?? "";
       const highest =
         row[`Subjective_Pattern_${date}_High`] ||
         row[`Subjective_Pattern_${date}_Highest_Marks`];
@@ -422,7 +424,7 @@ const sendProgress = (data) => {
           science,
           maths,
           english,
-          // sst,
+          sst,
           highest,
         });
       }
@@ -508,8 +510,7 @@ const sendProgress = (data) => {
     const formatted = dayjs(ptmDate).format("DD-MM-YY"); // 'dddd' = full day name
 
     console.log("Formatted date", formatted);
-
-    return {
+const data =  {
       name: row["NAME"] || row["Name"] || row["Student Name"] || "Unnamed",
       rollNo: (
         row["ROLL NO"] ||
@@ -555,6 +556,10 @@ const sendProgress = (data) => {
       attendance,
       feedback,
     };
+
+    console.log("Data frim the createReport From ")
+
+    return data
   };
 
   function removeCommas(input) {
