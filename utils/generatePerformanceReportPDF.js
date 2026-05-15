@@ -971,20 +971,42 @@ require("dotenv").config();
 
 // ==================== UTILITY FUNCTIONS ====================
 
+const hasValue = (value) =>
+  value !== undefined && value !== null && value !== "" && value !== "-";
+
+const escapeHtml = (value) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const displayValue = (value, fallback = "-") =>
+  escapeHtml(hasValue(value) ? value : fallback);
+
 const convertScoreToPerformance = (score) => {
-  if (score >= 9 && score <= 10) return "Excellent";
-  if (score >= 7 && score < 9) return "Good";
-  if (score >= 5 && score < 7) return "Needs Improvement";
+  const numericScore = Number(score);
+  if (!Number.isFinite(numericScore)) return "-";
+  if (numericScore >= 9 && numericScore <= 10) return "Excellent";
+  if (numericScore >= 7 && numericScore < 9) return "Good";
+  if (numericScore >= 5 && numericScore < 7) return "Needs Improvement";
   return "Poor";
 };
 
 const evaluateScores = (total, length) => {
-  const average = total / length;
+  const numericTotal = Number(total);
+  if (!Number.isFinite(numericTotal) || !length) return "-";
+  const average = numericTotal / length;
   return convertScoreToPerformance(average);
 };
 
 const getImageAsBase64 = (imagePath) => {
   try {
+    if (!imagePath) return null;
+    if (/^https?:\/\//i.test(imagePath) || imagePath.startsWith("data:")) {
+      return imagePath;
+    }
     const logoPath = path.resolve(__dirname, imagePath);
     const logoBase64 = fs.readFileSync(logoPath, { encoding: "base64" });
     return `data:image/png;base64,${logoBase64}`;
@@ -992,6 +1014,12 @@ const getImageAsBase64 = (imagePath) => {
     console.error("Error loading image:", error);
     return null;
   }
+};
+
+const getStudentPhotoSrc = (photo) => {
+  if (typeof photo === "string" && photo.trim()) return photo;
+  if (photo?.url) return getImageAsBase64(photo.url);
+  return getImageAsBase64("../assets/profileImg.png");
 };
 
 // ==================== CONFIGURATION ====================
@@ -1024,7 +1052,7 @@ const buildDynamicTable = (data, columns, rowBuilder, options = {}) => {
 
   const { stripedRows = true } = options;
   
-  const headerRow = `<tr>${columns.map(col => `<th${col.rowspan ? ` rowspan="${col.rowspan}"` : ''}${col.colspan ? ` colspan="${col.colspan}"` : ''}>${col.label}</th>`).join('')}</tr>`;
+  const headerRow = `<tr>${columns.map(col => `<th${col.rowspan ? ` rowspan="${col.rowspan}"` : ''}${col.colspan ? ` colspan="${col.colspan}"` : ''}>${escapeHtml(col.label)}</th>`).join('')}</tr>`;
   
   const bodyRows = data.map((row, i) => {
     const bgColor = stripedRows && i % 2 === 0 ? "#f8eeda" : "#ffffff";
@@ -1037,9 +1065,24 @@ const buildDynamicTable = (data, columns, rowBuilder, options = {}) => {
 const buildJeeMainSection = (data) => {
   if (!data?.jeeMain || data.jeeMain.length === 0) return null;
 
-  const availableSubjects = ALL_POSSIBLE_SUBJECTS.filter(({ key }) =>
-    data.jeeMain.some((row) => row[key] !== undefined)
+  const preferredSubjects = ALL_POSSIBLE_SUBJECTS.filter(({ key }) =>
+    data.jeeMain.some((row) => hasValue(row[key]))
   );
+  const preferredKeys = new Set(preferredSubjects.map((subject) => subject.key));
+  const extraSubjects = Array.from(
+    new Set(
+      data.jeeMain.flatMap((row) =>
+        Object.keys(row).filter(
+          (key) =>
+            !["date", "rank", "highest"].includes(key) &&
+            !preferredKeys.has(key) &&
+            data.jeeMain.some((item) => hasValue(item[key]))
+        )
+      )
+    )
+  ).map((key) => ({ key, label: key }));
+
+  const availableSubjects = [...preferredSubjects, ...extraSubjects];
 
   const columns = [
     { label: "Date" },
@@ -1049,8 +1092,8 @@ const buildJeeMainSection = (data) => {
   ];
 
   const rowBuilder = (row) => {
-    const subjectCells = availableSubjects.map((sub) => `<td>${row[sub.key] ?? ""}</td>`).join("");
-    return `<td>${row.date || ""}</td><td>${row.rank || ""}</td>${subjectCells}<td>${row.highest || ""}</td>`;
+    const subjectCells = availableSubjects.map((sub) => `<td>${displayValue(row[sub.key])}</td>`).join("");
+    return `<td>${displayValue(row.date)}</td><td>${displayValue(row.rank)}</td>${subjectCells}<td>${displayValue(row.highest)}</td>`;
   };
 
   // Determine pattern heading
@@ -1096,23 +1139,23 @@ const buildJeeAdvancedSection = (data) => {
   ];
 
   const rowBuilder = (row) => `
-    <td>${row.date}</td>
-    <td>${row.rank}</td>
-    <td>${row?.paper1?.phy || ""}</td>
-    <td>${row?.paper1?.chem || ""}</td>
-    <td>${row?.paper1?.maths || ""}</td>
-    <td>${row?.paper1?.total || ""}</td>
-    <td>${row?.paper2?.phy || ""}</td>
-    <td>${row?.paper2?.chem || ""}</td>
-    <td>${row?.paper2?.maths || ""}</td>
-    <td>${row?.paper2?.total || ""}</td>
-    <td>${row.total || ""}</td>
-    <td>${row.highest || ""}</td>
+    <td>${displayValue(row.date)}</td>
+    <td>${displayValue(row.rank)}</td>
+    <td>${displayValue(row?.paper1?.phy)}</td>
+    <td>${displayValue(row?.paper1?.chem)}</td>
+    <td>${displayValue(row?.paper1?.maths)}</td>
+    <td>${displayValue(row?.paper1?.total)}</td>
+    <td>${displayValue(row?.paper2?.phy)}</td>
+    <td>${displayValue(row?.paper2?.chem)}</td>
+    <td>${displayValue(row?.paper2?.maths)}</td>
+    <td>${displayValue(row?.paper2?.total)}</td>
+    <td>${displayValue(row.total)}</td>
+    <td>${displayValue(row.highest)}</td>
   `;
 
   const headerRow = `
-    <tr>${columns.map(col => `<th${col.rowspan ? ` rowspan="${col.rowspan}"` : ''}${col.colspan ? ` colspan="${col.colspan}"` : ''}>${col.label}</th>`).join('')}</tr>
-    <tr>${subColumns.map(col => `<th>${col.label}</th>`).join('')}</tr>
+    <tr>${columns.map(col => `<th${col.rowspan ? ` rowspan="${col.rowspan}"` : ''}${col.colspan ? ` colspan="${col.colspan}"` : ''}>${escapeHtml(col.label)}</th>`).join('')}</tr>
+    <tr>${subColumns.map(col => `<th>${escapeHtml(col.label)}</th>`).join('')}</tr>
   `;
 
   const bodyRows = data.jeeAdv.map((row, i) => {
@@ -1126,39 +1169,43 @@ const buildJeeAdvancedSection = (data) => {
 const buildSubjectiveSection = (data) => {
   if (!data?.subjecttivePattern || data.subjecttivePattern.length === 0) return null;
 
+  const scienceKeys = Array.from(
+    new Set(
+      data.subjecttivePattern.flatMap((row) =>
+        Object.keys(row.science || {}).filter((key) =>
+          data.subjecttivePattern.some((item) => hasValue(item.science?.[key]))
+        )
+      )
+    )
+  );
+
+  const extraColumns = [
+    { key: "maths", label: data.subjecttivePattern.find((row) => row.mathsLabel)?.mathsLabel || "Maths" },
+    { key: "english", label: data.subjecttivePattern.find((row) => row.englishLabel)?.englishLabel || "English" },
+    { key: "sst", label: data.subjecttivePattern.find((row) => row.sstLabel)?.sstLabel || "SST" },
+  ].filter((column) => data.subjecttivePattern.some((row) => hasValue(row[column.key])));
+
   const columns = [
     { label: "Date", rowspan: 2 },
     { label: "Rank", rowspan: 2 },
-    { label: "Science", colspan: 4 },
-    { label: "Maths(20)/Maths(80)", rowspan: 2 },
-    { label: "English(40)", rowspan: 2 },
-    { label: "SST(80)", rowspan: 2 },
+    ...(scienceKeys.length ? [{ label: "Science", colspan: scienceKeys.length }] : []),
+    ...extraColumns.map((column) => ({ label: column.label, rowspan: 2 })),
     { label: "Highest Marks", rowspan: 2 }
   ];
 
-  const subColumns = [
-    { label: "Phy(14)/Phy(29)" },
-    { label: "Chem(13)/Chem(26)" },
-    { label: "Bio(13)/Bio(25)" },
-    { label: "Total(40)/Total(80)" }
-  ];
+  const subColumns = scienceKeys.map((key) => ({ label: key.replace("ScienceTotal", "Total") }));
 
   const rowBuilder = (row) => `
-    <td>${row.date}</td>
-    <td>${row.rank}</td>
-    <td>${row.science?.["Phy(14)"] || row.science?.["Phy(29)"] || "-"}</td>
-    <td>${row.science?.["Chem(13)"] || row.science?.["Chem(26)"] || "-"}</td>
-    <td>${row.science?.["Bio(13)"] || row.science?.["Bio(25)"] || "-"}</td>
-    <td>${row.science?.["ScienceTotal(40)"] || row.science?.["ScienceTotal(80)"] || "-"}</td>
-    <td>${row.maths || "-"}</td>
-    <td>${row.english || "-"}</td>
-    <td>${row.sst || "-"}</td>
-    <td>${row.highest || "-"}</td>
+    <td>${displayValue(row.date)}</td>
+    <td>${displayValue(row.rank)}</td>
+    ${scienceKeys.map((key) => `<td>${displayValue(row.science?.[key])}</td>`).join("")}
+    ${extraColumns.map((column) => `<td>${displayValue(row[column.key])}</td>`).join("")}
+    <td>${displayValue(row.highest)}</td>
   `;
 
   const headerRow = `
-    <tr>${columns.map(col => `<th${col.rowspan ? ` rowspan="${col.rowspan}"` : ''}${col.colspan ? ` colspan="${col.colspan}"` : ''}>${col.label}</th>`).join('')}</tr>
-    <tr>${subColumns.map(col => `<th>${col.label}</th>`).join('')}</tr>
+    <tr>${columns.map(col => `<th${col.rowspan ? ` rowspan="${col.rowspan}"` : ''}${col.colspan ? ` colspan="${col.colspan}"` : ''}>${escapeHtml(col.label)}</th>`).join('')}</tr>
+    ${subColumns.length ? `<tr>${subColumns.map(col => `<th>${escapeHtml(col.label)}</th>`).join('')}</tr>` : ""}
   `;
 
   const bodyRows = data.subjecttivePattern.map((row, i) => {
@@ -1181,11 +1228,11 @@ const buildBoardResultSection = (data) => {
   ];
 
   const rowBuilder = (row) => `
-    <td>${row.examDate || ""}</td>
-    <td>${row.subject || ""}</td>
-    <td>${row.marksObtained || ""}</td>
-    <td>${row.highestMarks || ""}</td>
-    <td>${row.rank || ""}</td>
+    <td>${displayValue(row.examDate)}</td>
+    <td>${displayValue(row.subject)}</td>
+    <td>${displayValue(row.marksObtained)}</td>
+    <td>${displayValue(row.highestMarks)}</td>
+    <td>${displayValue(row.rank)}</td>
   `;
 
   return buildDynamicTable(data.boardResult, columns, rowBuilder);
@@ -1203,11 +1250,11 @@ const buildAttendanceSection = (data) => {
   ];
 
   const rowBuilder = (row) => `
-    <td>${row.month}</td>
-    <td>${row.held}</td>
-    <td>${row.present}</td>
-    <td>${row.absent}</td>
-    <td>${row.percent}</td>
+    <td>${displayValue(row.month)}</td>
+    <td>${displayValue(row.held)}</td>
+    <td>${displayValue(row.present)}</td>
+    <td>${displayValue(row.absent)}</td>
+    <td>${displayValue(row.percent)}</td>
   `;
 
   return buildDynamicTable(data.attendance, columns, rowBuilder);
@@ -1227,7 +1274,7 @@ const buildFeedbackSection = (data) => {
   const rowBuilder = (row, index) => {
     const isTotal = row.subject === "Total";
     return `
-      <td>${row.subject}</td>
+      <td>${displayValue(row.subject)}</td>
       <td>${isTotal ? evaluateScores(row.response, index) : convertScoreToPerformance(row.response)}</td>
       <td>${isTotal ? evaluateScores(row.discipline, index) : convertScoreToPerformance(row.discipline)}</td>
       <td>${isTotal ? evaluateScores(row.attention, index) : convertScoreToPerformance(row.attention)}</td>
@@ -1235,7 +1282,7 @@ const buildFeedbackSection = (data) => {
     `;
   };
 
-  const headerRow = `<tr>${columns.map(col => `<th>${col.label}</th>`).join('')}</tr>`;
+  const headerRow = `<tr>${columns.map(col => `<th>${escapeHtml(col.label)}</th>`).join('')}</tr>`;
   const bodyRows = data.feedback.map((row, i) => {
     const bgColor = i % 2 === 0 ? "#f8eeda" : "#ffffff";
     return `<tr style="background: ${bgColor};">${rowBuilder(row, i)}</tr>`;
@@ -1248,8 +1295,27 @@ const buildFeedbackSection = (data) => {
 
 const buildHTMLTemplate = (data, sections) => {
   const { jeeMain, jeeAdvanced, subjective, boardResult, attendance, feedback } = sections;
-  
-  const hasGraph = jeeMain && !jeeMain.heading.includes("Objective");
+  const graphExcludedKeys = new Set([
+    "labels",
+    "Total",
+    "Total(100)",
+    "Total(120)",
+    "abs",
+    "Phy(10)",
+    "Chem(10)",
+    "Bio(10)",
+    "Maths(25)",
+    "Eng(15)",
+    "Eng(10)",
+    "SST(30)",
+  ]);
+  const hasNumericGraphData = Object.entries(data.subjectWiseData || {}).some(
+    ([key, values]) =>
+      !graphExcludedKeys.has(key) &&
+      Array.isArray(values) &&
+      values.some((value) => Number.isFinite(Number(value)))
+  );
+  const hasGraph = jeeMain && !jeeMain.heading.includes("Objective") && hasNumericGraphData;
   const jeeMainRowCount = data?.jeeMain?.length || 0;
 
   return `<!DOCTYPE html>
@@ -1293,33 +1359,48 @@ const buildHTMLTemplate = (data, sections) => {
       display: grid;
       grid-template-columns: 1fr 3fr;
       text-align: center;
-      align-items: center;
+      align-items: stretch;
     }
 
     .photo-section {
       background: rgb(251, 232, 203);
       height: 100%;
+      min-height: 190px;
+      box-sizing: border-box;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 10px;
+      padding: 8px 10px;
     }
 
     .photo-section img {
       width: 125px;
       height: 125px;
-      margin-bottom: 10px;
+      object-fit: cover;
+      margin-bottom: 6px;
+      flex: 0 0 auto;
+    }
+
+    .photo-section p {
+      margin: 3px 0;
+      line-height: 1.2;
     }
 
     .info-section {
       display: flex;
       flex-direction: column;
       justify-content: center;
-      padding-left: 20px;
+      padding: 8px 0 8px 20px;
       text-align: start;
       background: rgb(242, 189, 83);
       height: 100%;
+      min-height: 190px;
+      box-sizing: border-box;
+    }
+
+    .info-section p {
+      margin: 8px 0;
     }
 
     .section-title {
@@ -1412,17 +1493,17 @@ const buildHTMLTemplate = (data, sections) => {
 
     <div class="student-info">
       <div class="photo-section">
-        <img src="${data?.photo || getImageAsBase64(data.photo?.url)}" alt="Student Photo" />
-        <p><strong>Name:</strong> ${data.name}</p>
-        <p><strong>Roll No.:</strong> ${data.rollNo}</p>
+        <img src="${getStudentPhotoSrc(data?.photo)}" alt="Student Photo" />
+        <p><strong>Name:</strong> ${displayValue(data.name)}</p>
+        <p><strong>Roll No.:</strong> ${displayValue(data.rollNo)}</p>
       </div>
       <div class="info-section">
         <div>
-          <p><strong>Date:</strong> ${data.ptmDate}</p>
-          <p><strong>Batch:</strong> ${data.batch}</p>
-          <p><strong>Mother's Name:</strong> ${data.motherName}</p>
-          <p><strong>Father's Name:</strong> ${data.fatherName}</p>
-          <p><strong>Batch Strength:</strong> ${data.batchStrength}</p>
+          <p><strong>Date:</strong> ${displayValue(data.ptmDate)}</p>
+          <p><strong>Batch:</strong> ${displayValue(data.batch)}</p>
+          <p><strong>Mother's Name:</strong> ${displayValue(data.motherName)}</p>
+          <p><strong>Father's Name:</strong> ${displayValue(data.fatherName)}</p>
+          <p><strong>Batch Strength:</strong> ${displayValue(data.batchStrength)}</p>
         </div>
       </div>
     </div>
@@ -1530,15 +1611,19 @@ const buildHTMLTemplate = (data, sections) => {
     ];
 
     const datasets = Object.keys(subjectWiseData)
-      .filter(key => !excludeKeys.includes(key) && subjectWiseData[key].some(v => v))
-      .map(key => ({
-        label: getSubjectName(key),
-        data: subjectWiseData[key].map(v => v && v !== "ABS" ? Number(v) : null),
-        backgroundColor: colorMap[key.toLowerCase()],
-        borderColor: colorMap[key.toLowerCase()],
-        fill: false,
-        tension: 0.3
-      }));
+      .filter(key => !excludeKeys.includes(key) && subjectWiseData[key].some(v => Number.isFinite(Number(v))))
+      .map((key, index) => {
+        const fallbackColors = ["#2f72da", "#c61d23", "#86b43b", "#ff9900", "#8e44ad", "#27ae60", "#34495e"];
+        const color = colorMap[key.toLowerCase()] || fallbackColors[index % fallbackColors.length];
+        return {
+          label: getSubjectName(key),
+          data: subjectWiseData[key].map(v => Number.isFinite(Number(v)) ? Number(v) : null),
+          backgroundColor: color,
+          borderColor: color,
+          fill: false,
+          tension: 0.3
+        };
+      });
 
     if (datasets.length) {
       const maxScore = Math.max(...datasets.flatMap(ds => ds.data.filter(v => v !== null)));
@@ -1602,14 +1687,25 @@ const generatePerformanceReportPDF = async (data, filePath) => {
       );
       browser = await puppeteerCore.launch({
         executablePath,
-        args: chromium.args,
+        args: [
+          ...chromium.args,
+          "--disable-crash-reporter",
+          "--disable-crashpad",
+          "--disable-dev-shm-usage",
+        ],
         headless: chromium.headless,
         defaultViewport: chromium.defaultViewport,
       });
     } else {
       browser = await puppeteer.launch({
         headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-crash-reporter",
+          "--disable-crashpad",
+          "--disable-dev-shm-usage",
+        ],
       });
     }
 

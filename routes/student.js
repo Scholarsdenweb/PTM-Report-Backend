@@ -89,12 +89,17 @@ const multer = require("multer");
 const cloudinary = require("../utils/cloudinary/cloudinarySetup.js");
 const Student = require("../models/Student");
 const stream = require("stream");
+const authMiddleware = require("../middlewares/authMiddleware");
+const isAdmin = require("../middlewares/isAdmin");
+const { parseStudentPhotoFileName } = require("../utils/normalizeStudentPhotoFileName");
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 // const Student = require("../models/Student");
 const Result = require("../models/ReportCard");
 const ReportCard = require("../models/ReportCard");
+
+router.use(authMiddleware);
 
 // GET /students/search
 router.get("/search", async (req, res) => {
@@ -158,7 +163,7 @@ router.post("/get-all-student-reports", async (req, res) => {
   }
 });
 
-router.delete("/delete/:rollNo", async (req, res) => {
+router.delete("/delete/:rollNo", isAdmin, async (req, res) => {
   try {
     const { rollNo } = req.params;
 
@@ -188,7 +193,7 @@ router.delete("/delete/:rollNo", async (req, res) => {
   }
 });
 
-router.delete("/delete-all", async (req, res) => {
+router.delete("/delete-all", isAdmin, async (req, res) => {
   try {
     await Result.deleteMany({});
     await Student.deleteMany({});
@@ -288,13 +293,16 @@ router.delete("/delete-all", async (req, res) => {
 const sseClients = new Map();
 
 // SSE endpoint to stream progress
-router.get("/bulk-upload-photos-stream", (req, res) => {
+router.get("/bulk-upload-photos-stream", isAdmin, (req, res) => {
   const clientId = Date.now() + Math.random();
+  let clientClosed = false;
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  if (req.headers.origin) {
+    res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
+  }
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("X-Accel-Buffering", "no");
 
@@ -307,12 +315,15 @@ router.get("/bulk-upload-photos-stream", (req, res) => {
   res.write("data: " + JSON.stringify({ type: "connected", message: "Connected to upload stream" }) + "\n\n");
 
   req.on("close", () => {
+    clientClosed = true;
     sseClients.delete(clientId);
     console.log(`SSE Client disconnected: ${clientId}`);
   });
 
   req.on("error", (err) => {
-    console.error(`SSE Error for client ${clientId}:`, err);
+    if (err.code !== "ECONNRESET" && !clientClosed) {
+      console.error(`SSE Error for client ${clientId}:`, err);
+    }
     sseClients.delete(clientId);
   });
 });
@@ -320,17 +331,23 @@ router.get("/bulk-upload-photos-stream", (req, res) => {
 // Helper function to broadcast SSE messages
 function broadcastProgress(data) {
   console.log("Broadcasting:", data);
-  sseClients.forEach((client) => {
+  sseClients.forEach((client, clientId) => {
+    if (client.destroyed || client.writableEnded) {
+      sseClients.delete(clientId);
+      return;
+    }
+
     try {
       client.write(`data: ${JSON.stringify(data)}\n\n`);
     } catch (err) {
       console.error("Error writing to SSE client:", err);
+      sseClients.delete(clientId);
     }
   });
 }
 
 // Main upload endpoint
-router.post("/bulk-upload-photos", upload.array("photos", 100), async (req, res) => {
+router.post("/bulk-upload-photos", isAdmin, upload.array("photos", 100), async (req, res) => {
   const uploaded = [];
   const failed = [];
   const skipped = [];
@@ -376,20 +393,20 @@ router.post("/bulk-upload-photos", upload.array("photos", 100), async (req, res)
       await new Promise((resolve) => {
         try {
           console.log("Processing file:", file.originalname);
-          const [rawName, rollNoWithExt] = file.originalname.split("_");
-          const rollNo = rollNoWithExt?.split(".")[0];
+          const parsedFileName = parseStudentPhotoFileName(file.originalname);
+          const rollNo = parsedFileName?.rollNo;
 
           if (!rollNo) {
             failed.push({
               file: file.originalname,
-              error: "Invalid filename format. Expected: Name_RollNo.jpg",
+              error: "Invalid filename format. Expected: firstname secondname_rollnumber.jpg",
             });
 
             broadcastProgress({
               type: "file_error",
               fileIndex,
               fileName: file.originalname,
-              message: `Invalid filename format`,
+              message: `Invalid filename format. Expected: firstname secondname_rollnumber.jpg`,
               completed: fileIndex + 1,
               total,
             });
@@ -397,8 +414,8 @@ router.post("/bulk-upload-photos", upload.array("photos", 100), async (req, res)
             return resolve();
           }
 
-          const name = rawName.replace(/([A-Z])/g, " $1").trim();
-          const fileName = `${name.replace(/\s+/g, "_")}_${rollNo}`;
+          const name = parsedFileName.name;
+          const fileName = parsedFileName.baseName;
 
           // Check if student already has a photo
           Student.findOne({ rollNo })
@@ -512,7 +529,7 @@ router.post("/bulk-upload-photos", upload.array("photos", 100), async (req, res)
                     broadcastProgress({
                       type: "file_success",
                       fileIndex,
-                      fileName: file.originalname,
+                      fileName: parsedFileName.fileName,
                       rollNo,
                       name: student.name,
                       message: `✅ Uploaded: ${name}`,

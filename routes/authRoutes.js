@@ -8,7 +8,7 @@ const authMiddleware = require("../middlewares/authMiddleware");
 require("dotenv").config();
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_key";
-const NODE_ENV = process.env.NODE_ENV;
+const isProduction = process.env.NODE_ENV === "production";
 
 
 // POST /api/auth/login
@@ -28,21 +28,23 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
 
     // Sign token
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "1d" });
+    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, {
+      expiresIn: "1d",
+    });
 
     console.log("user", user);
 
     // Set cookie
     res.cookie("token", token, {
-      httpOnly: false,
-      secure: false,
-      sameSite: "none",
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
     res.cookie("role", user.role, {
       httpOnly: false,
-      secure:  false,
-      sameSite: "none",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
  
@@ -76,15 +78,15 @@ router.get("/me", authMiddleware, async (req, res) => {
 
 router.post("/logout", (req, res) => {
   res.clearCookie("token", {
-    httpOnly: false,
-    sameSite: "none",
-    secure: process.env.NODE_ENV === "production", // true in production
+    httpOnly: true,
+    sameSite: isProduction ? "none" : "lax",
+    secure: isProduction,
   });
 
   res.clearCookie("role", {
     httpOnly: false, // since role was not httpOnly
-    sameSite: "none",
-    secure: process.env.NODE_ENV === "production",
+    sameSite: isProduction ? "none" : "lax",
+    secure: isProduction,
   });
 
   res.sendStatus(200);

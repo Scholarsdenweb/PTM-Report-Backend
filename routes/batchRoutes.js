@@ -12,6 +12,10 @@ const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const Student = require("../models/Student");
+const authMiddleware = require("../middlewares/authMiddleware");
+const isAdmin = require("../middlewares/isAdmin");
+
+router.use(authMiddleware);
 
 // GET /batches
 router.get("/", async (req, res) => {
@@ -758,7 +762,7 @@ router.get("/reports", async (req, res) => {
 //   }
 // });
 
-router.get("/admin/reports/download", async (req, res) => {
+router.get("/admin/reports/download", isAdmin, async (req, res) => {
   console.log("batchId from req.params", req.params);
   const { batchId, date, rollNo } = req.query;
 
@@ -865,14 +869,19 @@ router.get("/admin/reports/download", async (req, res) => {
 });
 
 router.post("/fetchDataByRollNo", async (req, res) => {
-  const { rollNo } = req.body;
-  const findStudentDetails = await Student.find({ rollNo });
-  console.log("FIndStudentDetails", findStudentDetails);
+  try {
+    const { rollNo } = req.body;
+    const students = await Student.find({ rollNo });
+    return res.json({ students });
+  } catch (error) {
+    console.error("Error fetching student by rollNo:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
 });
 
 
 
-router.post("/changeBatchName", async (req, res) => {
+router.post("/changeBatchName", isAdmin, async (req, res) => {
   try {
     const { currentBatch, newBatchName } = req.body;
 

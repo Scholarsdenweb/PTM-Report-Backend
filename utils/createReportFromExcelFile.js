@@ -19,6 +19,7 @@ const localizedFormat = require("dayjs/plugin/localizedFormat");
 const { checkIfReportCardExists } = require("./checkIfReportCardExists.js");
 const { deleteOldAndGenerateNew } = require("./deleteOldAndGenerateNew.js");
 const { removeFileFormServer } = require("./removeFileFormServer.js");
+const { buildStudentPhotoBaseName } = require("./normalizeStudentPhotoFileName.js");
 require("dayjs/locale/en");
 
 dayjs.extend(weekday);
@@ -33,10 +34,23 @@ const createReportFromExcelFile = async (
   res // Pass the response object for streaming
 ) => {
   const workbook = xlsx.readFile(filePath, { raw: true });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = xlsx.utils.sheet_to_json(sheet, {
-    raw: false,
-    defval: "",
+  const rows = workbook.SheetNames.flatMap((sheetName) => {
+    const sheet = workbook.Sheets[sheetName];
+    return xlsx.utils
+      .sheet_to_json(sheet, {
+        raw: false,
+        defval: "",
+      })
+      .filter((row) =>
+        Object.values(row).some(
+          (value) => value !== undefined && value !== null && String(value).trim() !== ""
+        )
+      )
+      .map((row, rowIndex) => ({
+        ...row,
+        __sheetName: sheetName,
+        __sheetRow: rowIndex + 2,
+      }));
   });
 
   const outputDir = path.join(__dirname, "reports");
@@ -69,16 +83,29 @@ const sendProgress = (data) => {
 
   // Validation and duplicate check...
   const rollNoCounts = new Map();
+  const getRowValue = (row, keys, fallback = "") => {
+    const key = keys.find(
+      (candidate) =>
+        row[candidate] !== undefined && row[candidate] !== null && row[candidate] !== ""
+    );
+    return key ? row[key] : fallback;
+  };
+
   for (const row of rows) {
-    const rollNo = row["Roll No"];
+    const rollNo = String(
+      getRowValue(row, ["ROLL NO", "Roll No", "Roll Number", "ROLLNO", "RollNo"])
+    )
+      .replace(/,/g, "")
+      .trim();
     if (!rollNo) continue;
-    const count = rollNoCounts.get(rollNo) || 0;
-    rollNoCounts.set(rollNo, count + 1);
+    const occurrences = rollNoCounts.get(rollNo) || [];
+    occurrences.push(`${row.__sheetName} row ${row.__sheetRow}`);
+    rollNoCounts.set(rollNo, occurrences);
   }
 
   const duplicateRollNos = [...rollNoCounts.entries()]
-    .filter(([_, count]) => count > 1)
-    .map(([rollNo]) => rollNo);
+    .filter(([_, occurrences]) => occurrences.length > 1)
+    .map(([rollNo, occurrences]) => `${rollNo} (${occurrences.join(", ")})`);
 
   if (duplicateRollNos.length > 0) {
     throw new Error(
@@ -101,12 +128,36 @@ const sendProgress = (data) => {
 
   const parseReportData = async (row, studentExist) => {
     console.log("Student Exist details ", studentExist);
+    const hasValue = (value) =>
+      value !== undefined && value !== null && value !== "" && value !== "-";
+
+    const firstValue = (keys, fallback = "") => {
+      const key = keys.find((candidate) => hasValue(row[candidate]));
+      return key ? row[key] : fallback;
+    };
+
+    const firstKey = (keys) => keys.find((candidate) => row[candidate] !== undefined);
+    const valueOrAbsent = (key) =>
+      key && row[key] !== undefined ? (hasValue(row[key]) ? row[key] : "Absent") : undefined;
+    const rowKeys = Object.keys(row).filter((key) => !key.startsWith("__"));
+
+    const uniqueDatesForPrefix = (prefix) => [
+      ...new Set(
+        rowKeys
+          .map((key) => key.match(new RegExp(`^${prefix}_(.+?)_(.+)$`))?.[1])
+          .filter(Boolean)
+      ),
+    ];
+
+    const escapeRegExp = (value) =>
+      String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
     const attendance = [];
 
     const monthSet = new Set();
 
     // Step 1: Collect valid months from matching keys
-    Object.keys(row).forEach((key) => {
+    rowKeys.forEach((key) => {
       const match = key.match(/^Attendance_([A-Za-z]+)_+([PA])$/i);
       if (match) {
         monthSet.add(match[1]);
@@ -173,32 +224,16 @@ const sendProgress = (data) => {
     // ];
 
     const resultDates = [
-      ...new Set(
-        Object.keys(row).reduce((acc, k) => {
-          if (
-            (k.startsWith("Result_") || k.startsWith("Objective_Pattern_")) &&
-            /_Phy|_Chem|_Maths|Math|_Bio|_Abs|_Tot|_Total|_Eng|_Phy\(10\)|_Chem\(10\)|_Bio\(10\)|_Math\(25\)|_Eng\(15\)|_SST\(30\)|_Total\(100\)|_SST/.test(
-              k
-            )
-          ) {
-            let part = null;
-            if (k.startsWith("Result_")) {
-              part = k.split("_")[1]; // "Result_2024_Phy" → "2024"
-            } else if (k.startsWith("Objective_Pattern_")) {
-              part = k.split("_")[2]; // "Objective_Pattern_2024_Phy(10)" → "2024"
-            }
-            if (part) acc.push(part);
-          }
-          return acc;
-        }, [])
-      ),
+      ...new Set([
+        ...uniqueDatesForPrefix("Result"),
+        ...uniqueDatesForPrefix("Objective_Pattern"),
+      ]),
     ];
 
     resultDates.forEach((date) => {
       const entry = { date };
 
       console.log("Date from resultDates", date);
-      subjectWiseData.labels.push(date);
 
       const subjectsMap = {
         phy: row[`Result_${date}_Physics`]
@@ -222,67 +257,87 @@ const sendProgress = (data) => {
         "Eng(15)": `Objective_Pattern_${date}_Eng(15)`,
         "Eng(10)": `Objective_Pattern_${date}_Eng(10)`,
         "SST(30)": `Objective_Pattern_${date}_SST(30)`,
-        "Highest Marks": `Objective_Pattern_${date}_Highest_Marks`,
         "Total(100)": `Objective_Pattern_${date}_Total(100)`,
         "Total(120)": `Objective_Pattern_${date}_Total(120)`,
-        Total: row[`Result_${date}_Total`]
-          ? `Result_${date}_Total`
-          : row[`Objective_Pattern_${date}_Total`]
-          ? `Objective_Pattern_${date}_Total`
-          : "-",
+        Total:
+          firstKey([
+            `Result_${date}_Total`,
+            `Result_${date}_Tot`,
+            `Result_${date}_Total(120)`,
+            `Objective_Pattern_${date}_Total`,
+            `Objective_Pattern_${date}_Total(100)`,
+            `Objective_Pattern_${date}_Total(120)`,
+          ]) || "-",
       };
 
-      let hasValidSubject = false;
+      let hasTestColumn = false;
 
       for (const [label, key] of Object.entries(subjectsMap)) {
         if (row.hasOwnProperty(key)) {
-          const value = row[key] ?? 0;
+          const value = valueOrAbsent(key);
           entry[label?.replace(/ \(.*?\)/, "")] = value; // strip "(xx)" for main keys
           subjectWiseData[label]?.push(value);
-          hasValidSubject = true;
+          hasTestColumn = true;
         }
       }
 
-      if (hasValidSubject) {
-        const rankKey = row[`Result_${date}_Rank`]
-          ? `Result_${date}_Rank`
-          : row[`Objective_Pattern_${date}_Rank`]
-          ? `Objective_Pattern_${date}_Rank`
-          : "-";
-        const totalKey = `Result_${date}_Total(120)` || `Result_${date}_Total`;
-        const altTotalKey = `Result_${date}_Tot`;
-        const highestKey =
-          row[`Result_${date}_High`] !== undefined
-            ? `Result_${date}_High`
-            : row[`Result_${date}_Highest_Marks`] !== undefined
-            ? `Result_${date}_Highest_Marks`
-            : row[`Result_${date}_Highest Marks`] !== undefined
-            ? `Result_${date}_Highest Marks`
-            : row[`Result_${date}_Highest Marks`] !== undefined
-            ? `Result_${date}_Highest Marks`
-            : row[`Objective_Pattern_${date}_Highest_Marks`] !== undefined
-            ? `Objective_Pattern_${date}_Highest_Marks`
-            : "-";
+      if (hasTestColumn) {
+        const rankKey = firstKey([
+          `Result_${date}_Rank`,
+          `Objective_Pattern_${date}_Rank`,
+        ]);
+        const totalKey = firstKey([
+          `Result_${date}_Total(120)`,
+          `Result_${date}_Total`,
+          `Result_${date}_Tot`,
+          `Objective_Pattern_${date}_Total(120)`,
+          `Objective_Pattern_${date}_Total(100)`,
+          `Objective_Pattern_${date}_Total`,
+        ]);
+        const highestKey = firstKey([
+          `Result_${date}_High`,
+          `Result_${date}_Highest_Marks`,
+          `Result_${date}_Highest Marks`,
+          `Objective_Pattern_${date}_High`,
+          `Objective_Pattern_${date}_Highest_Marks`,
+          `Objective_Pattern_${date}_Highest Marks`,
+        ]);
 
         // const highestKey = `Result_${date}_High` || `Result_${date}_Highest Marks`;
 
-        entry.rank = row[rankKey] || "-";
-        entry.total = row[totalKey] || row[altTotalKey] || 0;
-        entry.highest = row[highestKey] || 0;
+        entry.rank = rankKey ? row[rankKey] || "Absent" : "Absent";
+        entry.total = totalKey ? row[totalKey] || "Absent" : "Absent";
+        entry.highest = highestKey ? row[highestKey] || "-" : "-";
 
         jeeMain.push(entry);
       }
+    });
+
+    const graphKeys = [
+      ...new Set(
+        jeeMain.flatMap((entry) =>
+          Object.keys(entry).filter((key) => !["date", "rank", "highest"].includes(key))
+        )
+      ),
+    ];
+    subjectWiseData.labels = jeeMain.map((entry) => entry.date);
+    graphKeys.forEach((key) => {
+      subjectWiseData[key] = jeeMain.map((entry) => entry[key] ?? null);
     });
 
     const jeeAdv = [];
 
     const advDates = [
       ...new Set(
-        Object.keys(row)
-          .filter(
-            (key) => key.startsWith("JEE_ADV_Result") && key.split("_")[3]
+        rowKeys
+          .map(
+            (key) =>
+              key.match(/^JEE_(?:ADV|Advanced)(?:_Result)?_Paper[ _]([12])_Result_(.+?)_(.+)$/)?.[2] ||
+              key.match(/^JEE_(?:ADV|Advanced)_Result_(.+?)_(Rank|High|Highest_Marks|Highest Marks)$/)?.[1] ||
+              key.match(/^JEE_(?:ADV|Advanced)_Result_Grand_Total_(.+)$/)?.[1] ||
+              key.match(/^JEE_(?:ADV|Advanced)_Result_(.+?)_Grand_Total$/)?.[1]
           )
-          .map((key) => key.split("_")[3])
+          .filter(Boolean)
       ),
     ];
 
@@ -290,10 +345,10 @@ const sendProgress = (data) => {
       const rankKey = `JEE_ADV_Result_${date}_Rank`;
       // const rankKey = `JEE_Advanced_Result_${date}`;
       const paper1 = {
-        phy: row[`JEE_ADV_Result_Paper 1_Result_${date}_Phy`] ?? 0,
-        chem: row[`JEE_ADV_Result_Paper 1_Result_${date}_Chem`] ?? 0,
-        maths: row[`JEE_ADV_Result_Paper 1_Result_${date}_Maths`] ?? 0,
-        total: row[`JEE_ADV_Result_Paper 1_Result_${date}_Total_Marks`] ?? 0,
+        phy: firstValue([`JEE_ADV_Result_Paper 1_Result_${date}_Phy`, `JEE_Advanced_Paper_1_Result_${date}_Phy`], "Absent"),
+        chem: firstValue([`JEE_ADV_Result_Paper 1_Result_${date}_Chem`, `JEE_Advanced_Paper_1_Result_${date}_Chem`], "Absent"),
+        maths: firstValue([`JEE_ADV_Result_Paper 1_Result_${date}_Maths`, `JEE_ADV_Result_Paper 1_Result_${date}_Math`, `JEE_Advanced_Paper_1_Result_${date}_Maths`, `JEE_Advanced_Paper_1_Result_${date}_Math`], "Absent"),
+        total: firstValue([`JEE_ADV_Result_Paper 1_Result_${date}_Total_Marks`, `JEE_ADV_Result_Paper 1_Result_${date}_Total`, `JEE_Advanced_Paper_1_Result_${date}_Total_Marks`, `JEE_Advanced_Paper_1_Result_${date}_Total`], "Absent"),
       };
       // const paper1 = {
       //   phy: row[`JEE_Advanced_Result_${date}_P1`] ?? 0,
@@ -303,10 +358,10 @@ const sendProgress = (data) => {
       // };
 
       const paper2 = {
-        phy: row[`JEE_ADV_Result_Paper 2_Result_${date}_Phy`] ?? 0,
-        chem: row[`JEE_ADV_Result_Paper 2_Result_${date}_Chem`] ?? 0,
-        maths: row[`JEE_ADV_Result_Paper 2_Result_${date}_Maths`] ?? 0,
-        total: row[`JEE_ADV_Result_Paper 2_Result_${date}_Total_Marks`] ?? 0,
+        phy: firstValue([`JEE_ADV_Result_Paper 2_Result_${date}_Phy`, `JEE_Advanced_Paper_2_Result_${date}_Phy`], "Absent"),
+        chem: firstValue([`JEE_ADV_Result_Paper 2_Result_${date}_Chem`, `JEE_Advanced_Paper_2_Result_${date}_Chem`], "Absent"),
+        maths: firstValue([`JEE_ADV_Result_Paper 2_Result_${date}_Maths`, `JEE_ADV_Result_Paper 2_Result_${date}_Math`, `JEE_Advanced_Paper_2_Result_${date}_Maths`, `JEE_Advanced_Paper_2_Result_${date}_Math`], "Absent"),
+        total: firstValue([`JEE_ADV_Result_Paper 2_Result_${date}_Total_Marks`, `JEE_ADV_Result_Paper 2_Result_${date}_Total`, `JEE_Advanced_Paper_2_Result_${date}_Total_Marks`, `JEE_Advanced_Paper_2_Result_${date}_Total`], "Absent"),
       };
       // const paper2 = {
       //   phy: row[`JEE_Advanced_Result_${date}_P2`] ?? 0,
@@ -315,32 +370,36 @@ const sendProgress = (data) => {
       //   total: row[`JEE_Advanced_Result_${date}_T2`] ?? 0,
       // };
 
-      const total = row[`JEE_ADV_Result_${date}_Grand_Total`] ?? 0;
-      const highest =
-        row[`JEE_ADV_Result_${date}_High`] ||
-        row[`JEE_ADV_Result_${date}_Highest_Marks`];
+      const total = firstValue([
+        `JEE_ADV_Result_${date}_Grand_Total`,
+        `JEE_ADV_Result_Grand_Total_${date}`,
+        `JEE_ADV_Result_${date}_Total`,
+        `JEE_Advanced_Result_${date}_Grand_Total`,
+        `JEE_Advanced_Result_Grand_Total_${date}`,
+        `JEE_Advanced_Result_${date}_Total`,
+      ], "Absent");
+      const highest = firstValue([
+        `JEE_ADV_Result_${date}_High`,
+        `JEE_ADV_Result_${date}_Highest_Marks`,
+        `JEE_ADV_Result_${date}_Highest Marks`,
+        `JEE_Advanced_Result_${date}_High`,
+        `JEE_Advanced_Result_${date}_Highest_Marks`,
+        `JEE_Advanced_Result_${date}_Highest Marks`,
+      ], "");
 
-      // Only push if at least one subject or total is present
-      if (
-        Object.values(paper1).some((v) => v !== 0) ||
-        Object.values(paper2).some((v) => v !== 0) ||
-        total !== 0 ||
-        rankKey in row
-      ) {
-        jeeAdv.push({
-          date,
-          rank: row[rankKey] || "",
-          paper1,
-          paper2,
-          total,
-          highest,
-        });
-      }
+      jeeAdv.push({
+        date,
+        rank: firstValue([rankKey, `JEE_Advanced_Result_${date}_Rank`], "Absent"),
+        paper1,
+        paper2,
+        total,
+        highest,
+      });
     });
 
     const boardResult = [];
 
-    Object.keys(row).forEach((key) => {
+    rowKeys.forEach((key) => {
       const match = key.match(/^Board_Result_(.+?)_(.+)$/);
 
       if (match) {
@@ -379,95 +438,84 @@ const sendProgress = (data) => {
 
     const subjecttivePattern = [];
 
-    const subjectiveDates = [
-      ...new Set(
-        Object.keys(row)
-          .filter(
-            (key) => key.startsWith("Subjective_Pattern_") && key.split("_")[1]
-          )
-          .map((key) => key.split("_")[2])
-        // .map((key) => key.split("_")[2])
-      ),
-    ];
+    const subjectiveDates = uniqueDatesForPrefix("Subjective_Pattern");
 
     subjectiveDates.forEach((date) => {
       console.log("Subjective data  ", row);
 
-     const rankKey = `Subjective_Pattern_${date}_Rank`;
-      const science = {
-        "Phy(14)": row[`Subjective_Pattern_${date}_Phy(14)`] ?? "",
-        "Phy(29)": row[`Subjective_Pattern_${date}_Phy(29)`] ?? "",
-        "Chem(13)": row[`Subjective_Pattern_${date}_Chem(13)`] ?? "",
-        "Chem(26)": row[`Subjective_Pattern_${date}_Chem(26)`] ?? "",
-        "Bio(13)": row[`Subjective_Pattern_${date}_Bio(13)`] ?? "",
-        "Bio(25)": row[`Subjective_Pattern_${date}_Bio(25)`] ?? "",
-        "ScienceTotal(40)": row[`Subjective_Pattern_${date}_Total(40)`] ?? "",
-        "ScienceTotal(80)": row[`Subjective_Pattern_${date}_Total(80)`] ?? "",
-      };
+      const rankKey = `Subjective_Pattern_${date}_Rank`;
+      const fieldsForDate = rowKeys
+        .map((key) => key.match(new RegExp(`^Subjective_Pattern_${escapeRegExp(date)}_(.+)$`))?.[1])
+        .filter(Boolean);
 
-      const maths = row[`Subjective_Pattern_${date}_Maths(20)`] ?? row[`Subjective_Pattern_${date}_Maths(80)`] ?? "";
-      const english = row[`Subjective_Pattern_${date}_English(40)`] ?? row[`Subjective_Pattern_${date}_English(50)`] ?? "";
-      const sst = row[`Subjective_Pattern_${date}_SST(80)`] ?? "";
+      const science = {};
+      fieldsForDate.forEach((field) => {
+        const normalizedField = field.toLowerCase();
+        if (
+          normalizedField.startsWith("phy") ||
+          normalizedField.startsWith("chem") ||
+          normalizedField.startsWith("bio") ||
+          normalizedField.startsWith("total")
+        ) {
+          const reportKey = normalizedField.startsWith("total")
+            ? `ScienceTotal${field.match(/\(.+\)$/)?.[0] || ""}`
+            : field;
+          science[reportKey] = hasValue(row[`Subjective_Pattern_${date}_${field}`])
+            ? row[`Subjective_Pattern_${date}_${field}`]
+            : "Absent";
+        }
+      });
+
+      const mathsKey = firstKey(fieldsForDate.filter((field) => /^maths?/i.test(field)).map((field) => `Subjective_Pattern_${date}_${field}`));
+      const englishKey = firstKey(fieldsForDate.filter((field) => /^eng(lish)?/i.test(field)).map((field) => `Subjective_Pattern_${date}_${field}`));
+      const sstKey = firstKey(fieldsForDate.filter((field) => /^sst/i.test(field)).map((field) => `Subjective_Pattern_${date}_${field}`));
+      const maths = mathsKey ? row[mathsKey] || "Absent" : "";
+      const english = englishKey ? row[englishKey] || "Absent" : "";
+      const sst = sstKey ? row[sstKey] || "Absent" : "";
       const highest =
         row[`Subjective_Pattern_${date}_High`] ||
-        row[`Subjective_Pattern_${date}_Highest_Marks`];
+        row[`Subjective_Pattern_${date}_Highest_Marks`] ||
+        row[`Subjective_Pattern_${date}_Highest Marks`];
 
-      // Only push if at least one subject or total is present
-      if (
-        Object.values(science).some((v) => v !== 0) ||
-        maths !== 0 ||
-        rankKey in row
-      ) {
-        subjecttivePattern.push({
-          date,
-          rank: row[rankKey] || "",
-          science,
-          maths,
-          english,
-          sst,
-          highest,
-        });
-      }
+      subjecttivePattern.push({
+        date,
+        rank: row[rankKey] || "Absent",
+        science,
+        maths,
+        mathsLabel: mathsKey?.replace(`Subjective_Pattern_${date}_`, ""),
+        english,
+        englishLabel: englishKey?.replace(`Subjective_Pattern_${date}_`, ""),
+        sst,
+        sstLabel: sstKey?.replace(`Subjective_Pattern_${date}_`, ""),
+        highest,
+      });
     });
 
-    const subjects = [
-      { key: "Physics", label: "Physics" },
-      { key: "Phy.Chem.", label: "Physical Chemistry" },
-      { key: "Physical Chemistry", label: "Physical Chemistry" },
-      { key: "Physical_Chemistry", label: "Physical Chemistry" },
-      { key: "Organic Chemistry", label: "Organic Chemistry" },
-      { key: "Organic_Chemistry", label: "Organic Chemistry" },
-      { key: "Inorg.Chem", label: "Inorganic Chemistry" },
-      { key: "Inorg.Chem", label: "Inorganic Chemistry" },
-      { key: "Inorganic Chemistry", label: "Inorganic Chemistry" },
-      { key: "Inorg_Chemistry", label: "Inorganic Chemistry" },
-      { key: "Org_Chemistry", label: "Organic Chemistry" },
+    const feedbackSubjectLabels = {
+      "Phy.Chem.": "Physical Chemistry",
+      Physical_Chemistry: "Physical Chemistry",
+      Organic_Chemistry: "Organic Chemistry",
+      Org_Chemistry: "Organic Chemistry",
+      "Inorg.Chem": "Inorganic Chemistry",
+      Inorg_Chemistry: "Inorganic Chemistry",
+      Math: "Maths",
+      "Geography+Economics": "Geography + Economics",
+    };
 
-      { key: "Mathematics", label: "Mathematics" },
-      { key: "Math", label: "Maths" }, // Added variation if needed
-      { key: "Maths", label: "Maths" }, // Added variation if needed
-      { key: "Biology", label: "Biology" },
-      { key: "Botany", label: "Botany" },
-      { key: "Zoology", label: "Zoology" },
-
-      { key: "Chemistry", label: "Chemistry" },
-      { key: "Geography+Economics", label: "Geography + Economics" },
-      { key: "Geography", label: "Geography" },
-      { key: "Economics", label: "Economics" },
-      { key: "English", label: "English" },
-      { key: "History & Civics", label: "History & Civics" },
-      { key: "Total", label: "Total" },
+    const feedbackSubjects = [
+      ...new Set(
+        rowKeys
+          .map((key) => key.match(/^(.+)_(CR|D|CA|HW)$/)?.[1])
+          .filter(Boolean)
+      ),
     ];
-    // Construct Cloudinary image URL based on name and roll number
 
-    const feedback = subjects.reduce((acc, { key, label }) => {
+    const feedback = feedbackSubjects.reduce((acc, key) => {
+      const label = feedbackSubjectLabels[key] || key.replace(/_/g, " ");
       const response = row[`${key}_CR`];
       const discipline = row[`${key}_D`];
       const attention = row[`${key}_CA`];
       const homework = row[`${key}_HW`];
-
-      if (key === "Total") {
-      }
 
       // Add feedback only if at least one field is present
       if (
@@ -489,12 +537,10 @@ const sendProgress = (data) => {
     }, []);
 
     // const cloudinaryBase = `https://res.cloudinary.com/${cloud_name}/image/upload/PTM_Document/Student_Images`; // update as needed
-    const imageName = `${(row["Name"] || row["NAME"] || "Unknown")
-      .trim()
-      .replace(/\s+/g, "_")}_${(row["Roll No"] || row["ROLL NO"] || "")
-      .replace(/,/g, "")
-      .toString()
-      .trim()}`;
+    const imageName = buildStudentPhotoBaseName(
+      firstValue(["NAME", "Name", "Student Name"], "Unknown"),
+      firstValue(["ROLL NO", "Roll No", "Roll Number", "ROLLNO", "RollNo"], "")
+    );
 
     // For fetch Image from cloudinary
     const photoUrl = await findImageInCloudinaryFolder(imageName);
@@ -510,40 +556,28 @@ const sendProgress = (data) => {
     const formatted = dayjs(ptmDate).format("DD-MM-YY"); // 'dddd' = full day name
 
     console.log("Formatted date", formatted);
+    const fallbackPhoto = "../assets/profileImg.png";
+    const studentPhoto = studentExist?.photoUrl || photoUrl?.url || fallbackPhoto;
+
 const data =  {
-      name: row["NAME"] || row["Name"] || row["Student Name"] || "Unnamed",
+      name: firstValue(["NAME", "Name", "Student Name"], "Unnamed"),
       rollNo: (
-        row["ROLL NO"] ||
-        row["Roll No"] ||
-        row["Roll Number"] ||
-        "Unknown"
-      ).replace(/,/g, ""),
-      batch: row["BATCH"] || row["Batch"] || "",
-      motherName: row["M_N"] || row["Mother Name"] || "",
-      fatherName: row["F_N"] || row["Father Name"] || "",
+        firstValue(["ROLL NO", "Roll No", "Roll Number", "ROLLNO", "RollNo"], "Unknown")
+      ).toString().replace(/,/g, ""),
+      batch: firstValue(["BATCH", "Batch"], ""),
+      motherName: firstValue(["M_N", "Mother Name", "MotherName"], ""),
+      fatherName: firstValue(["F_N", "Father Name", "FatherName"], ""),
       fatherContactNumber:
-        row["Father Contact No."] ||
-        row["Father Contact No"] ||
-        row["StudentContactNo"],
+        firstValue(["Father Contact No.", "Father Contact No", "Father Contact Number", "FatherContactNo"], ""),
       motherContactNumber:
-        row["Mother Contact No."] ||
-        row["Mother Contact No"] ||
-        row["FatherContactNo"],
+        firstValue(["Mother Contact No.", "Mother Contact No", "Mother Contact Number", "MotherContactNo"], ""),
       studentContactNumber:
-        row["Student Contact No."] ||
-        row["Student Contact No"] ||
-        row["StudentContactNo"],
-      batchStrength: row["Strength"] || row["STRENGTH"],
+        firstValue(["Student Contact No.", "Student Contact No", "Students Contact No.", "StudentContactNo"], ""),
+      batchStrength: firstValue(["Strength", "STRENGTH"], ""),
       // photo : `../photographs/${row["Name"]}_${row["Roll No"]}`,
       // photo: "../assets/profileImg.png",
       // photo: photoUrl,
-      photo: 
-      // studentExist
-      //   ? studentExist.photoUrl
-      //   : 
-        photoUrl
-        ? photoUrl.url
-        : { url: "../assets/profileImg.png" },
+      photo: studentPhoto,
       ptmDate: formatted,
       // photo: "../assets/student.png",
       headerImage: "../assets/headerImage.png",
@@ -570,9 +604,11 @@ const data =  {
   }
 
   for (const row of rows) {
-    const studentRollNo = removeCommas(row["Roll No"]);
+    const studentRollNo = removeCommas(
+      getRowValue(row, ["ROLL NO", "Roll No", "Roll Number", "ROLLNO", "RollNo"], "")
+    );
     const studentName =
-      row["NAME"] || row["Name"] || row["Student Name"] || "Unnamed";
+      getRowValue(row, ["NAME", "Name", "Student Name"], "Unnamed");
 
     try {
       sendProgress({
@@ -635,7 +671,7 @@ const data =  {
           fatherName: studentData.fatherName,
           motherName: studentData.motherName,
           batch: studentData.batch,
-          photoUrl: studentData?.photo?.url,
+          photoUrl: studentData?.photo,
           fatherContact:
             removeCommas(studentData.fatherContactNumber) ||
             removeCommas(studentData.FATHER_CONTACT_NO),

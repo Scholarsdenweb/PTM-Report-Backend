@@ -13,21 +13,27 @@ const ReportCard = require("../models/ReportCard");
 
 router.post(
   "/upload",
+  authMiddleware,
+  isAdmin,
   upload.single("csvFile"),
   ptmController.handleUpload.bind(ptmController)
 );
 router.post(
   "/regenrate",
+  authMiddleware,
+  isAdmin,
   upload.single("csvFile"),
   ptmController.handleUpload.bind(ptmController)
 );
 router.post(
   "/send-whatsapp-message",
+  authMiddleware,
+  isAdmin,
   whatsappMessageConsoller.handleSend.bind(whatsappMessageConsoller)
 );
 
 // DELETE all reports of students in a particular batch
-router.delete("/batch/:batchId", async (req, res) => {
+router.delete("/batch/:batchId", authMiddleware, isAdmin, async (req, res) => {
   const { batchId } = req.params;
 
   try {
@@ -68,11 +74,13 @@ router.get(
 
 router.post(
   "/send-single-message-on-whatsapp",
+  authMiddleware,
+  isAdmin,
   whatsappMessageConsoller.sendSingleMessage.bind(whatsappMessageConsoller)
 );
 
 // Debug route to confirm file received
-router.post("/debug-upload", upload.single("csvFile"), (req, res) => {
+router.post("/debug-upload", authMiddleware, isAdmin, upload.single("csvFile"), (req, res) => {
   console.log("------ Incoming Request ------");
   console.log("Headers:", req.headers);
   console.log("Body:", req.body);
