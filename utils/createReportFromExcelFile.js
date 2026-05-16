@@ -5,6 +5,7 @@ const generatePerformanceReportPDF = require("./generatePerformanceReportPDF");
 
 const StudentModel = require("../models/Student.js");
 const ReportCardModel = require("../models/ReportCard.js");
+const { getAcademicSession } = require("./sessionUtils.js");
 
 require("dotenv").config();
 
@@ -656,21 +657,27 @@ const data =  {
 
       await generatePerformanceReportPDF(studentData, reportPath);
 
-      const uploadedUrl = await reportService.uploadReport(
-        reportPath,
-        studentData.name,
-        studentData.rollNo,
-        studentData.ptmDate.split(" ")[0]
-      );
+	      const uploadedUrl = await reportService.uploadReport(
+	        reportPath,
+	        studentData.name,
+	        studentData.rollNo,
+	        studentData.ptmDate.split(" ")[0]
+	      );
 
-      // Upsert student
-      let student = await StudentModel.findOneAndUpdate(
+	      const [dd, mm, yy] = studentData.ptmDate.split("-");
+	      const fullYear = `20${yy}`;
+	      const fullDate = new Date(`${fullYear}-${mm}-${dd}T00:00:00Z`);
+	      const session = getAcademicSession(fullDate);
+
+	      // Upsert student
+	      let student = await StudentModel.findOneAndUpdate(
         { rollNo: studentData.rollNo },
         {
           name: studentData.name,
           fatherName: studentData.fatherName,
           motherName: studentData.motherName,
           batch: studentData.batch,
+          session,
           photoUrl: studentData?.photo,
           fatherContact:
             removeCommas(studentData.fatherContactNumber) ||
@@ -682,14 +689,12 @@ const data =  {
         { upsert: true, new: true }
       );
 
-      const [dd, mm, yy] = studentData.ptmDate.split("-");
-      const fullYear = `20${yy}`;
-      const fullDate = new Date(`${fullYear}-${mm}-${dd}T00:00:00Z`);
-
-      const reportData = await ReportCardModel.create({
+	      const reportData = await ReportCardModel.create({
         student: student._id,
         public_id: uploadedUrl.public_id,
         secure_url: uploadedUrl.secure_url,
+        batch: studentData.batch,
+        session,
         reportDate: fullDate,
       });
 

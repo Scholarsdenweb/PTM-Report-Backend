@@ -15,6 +15,8 @@ const reportCardSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    batch: String,
+    session: String,
     reportDate: {
       type: Date,
       default: Date.now,

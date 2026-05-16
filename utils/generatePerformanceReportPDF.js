@@ -1016,10 +1016,60 @@ const getImageAsBase64 = (imagePath) => {
   }
 };
 
+const getOptimizedCloudinaryImageUrl = (url) => {
+  if (!/^https?:\/\//i.test(url) || !url.includes("/image/upload/")) {
+    return url;
+  }
+
+  const transformation = "c_fill,w_420,h_420,q_auto:eco,f_jpg";
+  if (url.includes(`/${transformation}/`)) return url;
+  return url.replace("/image/upload/", `/image/upload/${transformation}/`);
+};
+
 const getStudentPhotoSrc = (photo) => {
-  if (typeof photo === "string" && photo.trim()) return photo;
-  if (photo?.url) return getImageAsBase64(photo.url);
+  if (typeof photo === "string" && photo.trim()) {
+    return getOptimizedCloudinaryImageUrl(photo);
+  }
+  if (photo?.url) return getOptimizedCloudinaryImageUrl(getImageAsBase64(photo.url));
   return getImageAsBase64("../assets/profileImg.png");
+};
+
+const compressStudentPhotoInPage = async (page) => {
+  await page.evaluate(async () => {
+    const image = document.querySelector(".photo-section img");
+    if (!image) return;
+
+    if (!image.complete) {
+      await new Promise((resolve) => {
+        image.onload = resolve;
+        image.onerror = resolve;
+      });
+    }
+
+    const naturalWidth = image.naturalWidth || image.width;
+    const naturalHeight = image.naturalHeight || image.height;
+    if (!naturalWidth || !naturalHeight) return;
+
+    const maxDimension = 420;
+    const scale = Math.min(1, maxDimension / Math.max(naturalWidth, naturalHeight));
+    const width = Math.max(1, Math.round(naturalWidth * scale));
+    const height = Math.max(1, Math.round(naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    try {
+      context.drawImage(image, 0, 0, width, height);
+      image.src = canvas.toDataURL("image/jpeg", 0.72);
+      image.width = 125;
+      image.height = 125;
+    } catch (error) {
+      console.warn("Student photo canvas compression skipped:", error.message);
+    }
+  });
 };
 
 // ==================== CONFIGURATION ====================
@@ -1711,6 +1761,7 @@ const generatePerformanceReportPDF = async (data, filePath) => {
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+    await compressStudentPhotoInPage(page);
     await page.addScriptTag({ url: "https://cdn.jsdelivr.net/npm/chart.js" });
     await page.pdf({ path: filePath, format: "A4", printBackground: true });
     await browser.close();

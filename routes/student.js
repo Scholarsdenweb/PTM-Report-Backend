@@ -101,6 +101,37 @@ const ReportCard = require("../models/ReportCard");
 
 router.use(authMiddleware);
 
+const extractCloudinaryPublicIdFromUrl = (url = "") => {
+  try {
+    const parsedUrl = new URL(url);
+    const uploadIndex = parsedUrl.pathname.indexOf("/upload/");
+    if (uploadIndex === -1) return null;
+
+    let publicPath = parsedUrl.pathname.slice(uploadIndex + "/upload/".length);
+    publicPath = publicPath.replace(/^v\d+\//, "");
+    publicPath = publicPath.replace(/\.[^.]+$/, "");
+    return decodeURIComponent(publicPath);
+  } catch {
+    return null;
+  }
+};
+
+const cloudinaryImageExists = async (photoUrl, fallbackBaseName) => {
+  const publicId =
+    extractCloudinaryPublicIdFromUrl(photoUrl) ||
+    `PTM_Document/Student_Images/${fallbackBaseName}`;
+
+  try {
+    await cloudinary.api.resource(publicId, { resource_type: "image" });
+    return true;
+  } catch (error) {
+    if (error.http_code === 404 || error.error?.http_code === 404) {
+      return false;
+    }
+    throw error;
+  }
+};
+
 // GET /students/search
 router.get("/search", async (req, res) => {
   const { batch, rollNo } = req.query;
@@ -417,28 +448,37 @@ router.post("/bulk-upload-photos", isAdmin, upload.array("photos", 100), async (
           const name = parsedFileName.name;
           const fileName = parsedFileName.baseName;
 
-          // Check if student already has a photo
+          // Check if student already has a photo that still exists in Cloudinary
           Student.findOne({ rollNo })
-            .then((existingStudent) => {
+            .then(async (existingStudent) => {
               if (existingStudent && existingStudent.photoUrl) {
-                console.log(`⏭️  Skipped: ${rollNo} (photo already exists)`);
-                skipped.push({
-                  rollNo,
-                  file: file.originalname,
-                  reason: "Photo already exists",
-                });
+                const existsInCloudinary = await cloudinaryImageExists(
+                  existingStudent.photoUrl,
+                  fileName
+                );
 
-                broadcastProgress({
-                  type: "file_skipped",
-                  fileIndex,
-                  fileName: file.originalname,
-                  rollNo,
-                  message: `Skipped: ${name} (photo already exists)`,
-                  completed: fileIndex + 1,
-                  total,
-                });
+                if (existsInCloudinary) {
+                  console.log(`⏭️  Skipped: ${rollNo} (photo already exists)`);
+                  skipped.push({
+                    rollNo,
+                    file: file.originalname,
+                    reason: "Photo already exists",
+                  });
 
-                return resolve();
+                  broadcastProgress({
+                    type: "file_skipped",
+                    fileIndex,
+                    fileName: parsedFileName.fileName,
+                    rollNo,
+                    message: `Skipped: ${name} (photo already exists)`,
+                    completed: fileIndex + 1,
+                    total,
+                  });
+
+                  return resolve();
+                }
+
+                console.log(`Re-uploading ${rollNo}; saved photo URL no longer exists in Cloudinary`);
               }
 
               // Broadcast uploading to cloudinary

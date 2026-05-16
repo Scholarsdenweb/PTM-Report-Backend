@@ -14,14 +14,100 @@ const path = require("path");
 const Student = require("../models/Student");
 const authMiddleware = require("../middlewares/authMiddleware");
 const isAdmin = require("../middlewares/isAdmin");
+const { sessionExpression } = require("../utils/sessionUtils");
 
 router.use(authMiddleware);
+
+// GET /batches/sessions
+router.get("/sessions", async (req, res) => {
+  try {
+    res.set("Cache-Control", "no-store");
+
+    const sessions = await ReportCardModel.aggregate([
+      {
+        $addFields: {
+          normalizedSession: sessionExpression("$reportDate", "$session"),
+        },
+      },
+      {
+        $group: {
+          _id: "$normalizedSession",
+          reportCount: { $sum: 1 },
+        },
+      },
+      { $match: { _id: { $ne: "" } } },
+      { $project: { _id: 0, session: "$_id", reportCount: 1 } },
+      { $sort: { session: -1 } },
+    ]);
+
+    res.json({
+      sessions: sessions.map((item) => item.session),
+      sessionStats: sessions,
+      stats: sessions,
+    });
+  } catch (error) {
+    console.error("Error fetching sessions:", error);
+    res.status(500).json({ message: "Failed to fetch sessions" });
+  }
+});
 
 // GET /batches
 router.get("/", async (req, res) => {
   try {
-    const batches = await StudentModel.distinct("batch");
-    res.json({ batches });
+    res.set("Cache-Control", "no-store");
+    const selectedSession = req.query.session ? String(req.query.session).trim() : "";
+
+    const batchStats = await ReportCardModel.aggregate([
+      {
+        $lookup: {
+          from: "students",
+          localField: "student",
+          foreignField: "_id",
+          as: "student",
+        },
+      },
+      { $unwind: "$student" },
+      {
+        $addFields: {
+          normalizedBatch: {
+            $trim: {
+              input: {
+                $toString: { $ifNull: ["$batch", "$student.batch"] },
+              },
+            },
+          },
+          normalizedSession: sessionExpression("$reportDate", "$session"),
+        },
+      },
+      ...(selectedSession ? [{ $match: { normalizedSession: selectedSession } }] : []),
+      {
+        $group: {
+          _id: "$normalizedBatch",
+          reportCount: { $sum: 1 },
+          studentIds: { $addToSet: "$student._id" },
+        },
+      },
+      { $match: { _id: { $ne: "" } } },
+      {
+        $project: {
+          _id: 0,
+          batch: "$_id",
+          reportCount: 1,
+          studentCount: { $size: "$studentIds" },
+        },
+      },
+      { $sort: { batch: 1 } },
+    ]);
+    const batches = batchStats.map((item) => item.batch).filter(Boolean);
+    const totals = batchStats.reduce(
+      (acc, item) => ({
+        reportCount: acc.reportCount + Number(item.reportCount || 0),
+        studentCount: acc.studentCount + Number(item.studentCount || 0),
+      }),
+      { reportCount: 0, studentCount: 0 }
+    );
+
+    res.json({ batches, batchStats, stats: batchStats, totals });
   } catch (error) {
     console.error("Error fetching batches:", error);
     res.status(500).json({ message: "Failed to fetch batches" });
@@ -30,9 +116,12 @@ router.get("/", async (req, res) => {
 
 // GET /batches/:batch/dates
 router.get("/:batch/dates", async (req, res) => {
-  const { batch } = req.params;
+  const batch = decodeURIComponent(req.params.batch).trim();
 
   try {
+    res.set("Cache-Control", "no-store");
+    const selectedSession = req.query.session ? String(req.query.session).trim() : "";
+
     const dates = await ReportCardModel.aggregate([
       {
         $lookup: {
@@ -43,19 +132,38 @@ router.get("/:batch/dates", async (req, res) => {
         },
       },
       { $unwind: "$student" },
-      { $match: { "student.batch": batch } },
+      {
+        $addFields: {
+          normalizedBatch: {
+            $trim: {
+              input: {
+                $toString: { $ifNull: ["$batch", "$student.batch"] },
+              },
+            },
+          },
+          normalizedSession: sessionExpression("$reportDate", "$session"),
+        },
+      },
+      {
+        $match: {
+          normalizedBatch: batch,
+          ...(selectedSession ? { normalizedSession: selectedSession } : {}),
+        },
+      },
       {
         $group: {
           _id: {
             $dateToString: { format: "%Y-%m-%d", date: "$reportDate" },
           },
+          count: { $sum: 1 },
         },
       },
       { $sort: { _id: -1 } },
     ]);
 
     const distinctDates = dates.map((d) => d._id);
-    res.json({ dates: distinctDates });
+    const dateStats = dates.map((d) => ({ date: d._id, count: d.count }));
+    res.json({ dates: distinctDates, dateStats, stats: dateStats });
   } catch (err) {
     console.error("Error fetching dates:", err);
     res.status(500).json({ message: "Failed to fetch report dates" });
@@ -209,6 +317,7 @@ router.get("/reports", async (req, res) => {
     const {
       batch,
       date,
+      session,
       name = "",
       rollNo = "",
       page = 1,
@@ -223,49 +332,22 @@ router.get("/reports", async (req, res) => {
     const limitNumber = parseInt(limit);
     const skip = (pageNumber - 1) * limitNumber;
 
-    // Build student filter
-    const studentFilter = {
-      batch,
-      ...(name || rollNo
-        ? {
-            $and: [
-              name ? { name: { $regex: name, $options: "i" } } : {},
-              rollNo ? { rollNo: { $regex: rollNo, $options: "i" } } : {},
-            ],
-          }
-        : {}),
-    };
-
-    // Find only IDs of matched students
-    const matchedStudents = await StudentModel.find(studentFilter).select(
-      "_id"
-    );
-
-    if (matchedStudents.length === 0) {
-      return res.json({
-        reports: [],
-        totalPages: 1,
-        currentPage: 1,
-        totalReports: 0,
-      });
-    }
-
     const startOfDay = new Date(date);
     startOfDay.setUTCHours(0, 0, 0, 0);
     const endOfDay = new Date(date);
     endOfDay.setUTCHours(23, 59, 59, 999);
 
-    const reportFilter = {
-      student: { $in: matchedStudents.map((s) => s._id) },
-      reportDate: { $gte: startOfDay, $lte: endOfDay },
+    const selectedSession = session ? String(session).trim() : "";
+    const normalizedBatch = String(batch).trim();
+    const matchAfterLookup = {
+      normalizedBatch,
+      ...(selectedSession ? { normalizedSession: selectedSession } : {}),
+      ...(name ? { "student.name": { $regex: name, $options: "i" } } : {}),
+      ...(rollNo ? { "student.rollNo": { $regex: rollNo, $options: "i" } } : {}),
     };
 
-    // Total count for pagination
-    const totalReports = await ReportCardModel.countDocuments(reportFilter);
-
-    // Aggregation pipeline (with $lookup to populate student)
-    const reports = await ReportCardModel.aggregate([
-      { $match: reportFilter },
+    const basePipeline = [
+      { $match: { reportDate: { $gte: startOfDay, $lte: endOfDay } } },
       {
         $lookup: {
           from: "students", // MongoDB collection name for StudentModel
@@ -275,6 +357,29 @@ router.get("/reports", async (req, res) => {
         },
       },
       { $unwind: "$student" },
+      {
+        $addFields: {
+          normalizedBatch: {
+            $trim: {
+              input: {
+                $toString: { $ifNull: ["$batch", "$student.batch"] },
+              },
+            },
+          },
+          normalizedSession: sessionExpression("$reportDate", "$session"),
+        },
+      },
+      { $match: matchAfterLookup },
+    ];
+
+    const countResult = await ReportCardModel.aggregate([
+      ...basePipeline,
+      { $count: "totalReports" },
+    ]);
+    const totalReports = countResult[0]?.totalReports || 0;
+
+    const reports = await ReportCardModel.aggregate([
+      ...basePipeline,
       { $sort: { "student.name": 1, _id: 1 } }, // stable sort
       { $skip: skip },
       { $limit: limitNumber },
@@ -764,7 +869,7 @@ router.get("/reports", async (req, res) => {
 
 router.get("/admin/reports/download", isAdmin, async (req, res) => {
   console.log("batchId from req.params", req.params);
-  const { batchId, date, rollNo } = req.query;
+  const { batchId, date, rollNo, session } = req.query;
 
   try {
     let reports = [];
@@ -811,7 +916,24 @@ router.get("/admin/reports/download", isAdmin, async (req, res) => {
           },
         },
         { $unwind: "$student" },
-        { $match: { "student.batch": batchId } },
+        {
+          $addFields: {
+            normalizedBatch: {
+              $trim: {
+                input: {
+                  $toString: { $ifNull: ["$batch", "$student.batch"] },
+                },
+              },
+            },
+            normalizedSession: sessionExpression("$reportDate", "$session"),
+          },
+        },
+        {
+          $match: {
+            normalizedBatch: batchId,
+            ...(session ? { normalizedSession: String(session).trim() } : {}),
+          },
+        },
       ]);
 
       if (!reports.length) {

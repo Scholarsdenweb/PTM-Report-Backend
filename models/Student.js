@@ -6,6 +6,7 @@ const studentSchema = new mongoose.Schema(
     name: { type: String, required: true },
     photoUrl: String,
     batch: String,
+    session: String,
     fatherName: String,
     motherName: String,
     fatherContact: {type : String, unique : true},
