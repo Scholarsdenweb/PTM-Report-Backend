@@ -138,6 +138,12 @@ const sendProgress = (data) => {
     };
 
     const firstKey = (keys) => keys.find((candidate) => row[candidate] !== undefined);
+    const highestMarksKeys = (prefix, date) => [
+      `${prefix}_${date}_High`,
+      `${prefix}_${date}_Highest_Marks`,
+      `${prefix}_${date}_Highest Marks`,
+      `${prefix}_${date}_Highest marks`,
+    ];
     const valueOrAbsent = (key) =>
       key && row[key] !== undefined ? (hasValue(row[key]) ? row[key] : "Absent") : undefined;
     const rowKeys = Object.keys(row).filter((key) => !key.startsWith("__"));
@@ -296,12 +302,8 @@ const sendProgress = (data) => {
           `Objective_Pattern_${date}_Total`,
         ]);
         const highestKey = firstKey([
-          `Result_${date}_High`,
-          `Result_${date}_Highest_Marks`,
-          `Result_${date}_Highest Marks`,
-          `Objective_Pattern_${date}_High`,
-          `Objective_Pattern_${date}_Highest_Marks`,
-          `Objective_Pattern_${date}_Highest Marks`,
+          ...highestMarksKeys("Result", date),
+          ...highestMarksKeys("Objective_Pattern", date),
         ]);
 
         // const highestKey = `Result_${date}_High` || `Result_${date}_Highest Marks`;
@@ -380,12 +382,8 @@ const sendProgress = (data) => {
         `JEE_Advanced_Result_${date}_Total`,
       ], "Absent");
       const highest = firstValue([
-        `JEE_ADV_Result_${date}_High`,
-        `JEE_ADV_Result_${date}_Highest_Marks`,
-        `JEE_ADV_Result_${date}_Highest Marks`,
-        `JEE_Advanced_Result_${date}_High`,
-        `JEE_Advanced_Result_${date}_Highest_Marks`,
-        `JEE_Advanced_Result_${date}_Highest Marks`,
+        ...highestMarksKeys("JEE_ADV_Result", date),
+        ...highestMarksKeys("JEE_Advanced_Result", date),
       ], "");
 
       jeeAdv.push({
@@ -421,9 +419,7 @@ const sendProgress = (data) => {
         const subject = field;
         const rank = row[`Board_Result_${date}_Rank`] || "-";
         const highestMarks =
-          row[`Board_Result_${date}_Highest marks`] ||
-          row[`Board_Result_${date}_Highest_Marks`] ||
-          row[`Board_Result_${date}_Highest Marks`] ||
+          firstValue(highestMarksKeys("Board_Result", date)) ||
           "-";
         const marksObtained = row[key] ?? "-";
 
@@ -473,10 +469,7 @@ const sendProgress = (data) => {
       const maths = mathsKey ? row[mathsKey] || "Absent" : "";
       const english = englishKey ? row[englishKey] || "Absent" : "";
       const sst = sstKey ? row[sstKey] || "Absent" : "";
-      const highest =
-        row[`Subjective_Pattern_${date}_High`] ||
-        row[`Subjective_Pattern_${date}_Highest_Marks`] ||
-        row[`Subjective_Pattern_${date}_Highest Marks`];
+      const highest = firstValue(highestMarksKeys("Subjective_Pattern", date));
 
       subjecttivePattern.push({
         date,
