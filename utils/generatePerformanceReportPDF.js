@@ -1115,16 +1115,27 @@ const buildDynamicTable = (data, columns, rowBuilder, options = {}) => {
 const buildJeeMainSection = (data) => {
   if (!data?.jeeMain || data.jeeMain.length === 0) return null;
 
-  const preferredSubjects = ALL_POSSIBLE_SUBJECTS.filter(({ key }) =>
+  const TOTAL_KEYS = ["Total(100)", "Total(120)", "Total"];
+  const allPreferredSubjects = ALL_POSSIBLE_SUBJECTS.filter(({ key }) =>
     data.jeeMain.some((row) => hasValue(row[key]))
   );
+  // Show only one total column, even when several total keys have values
+  const firstTotalSubject = allPreferredSubjects.find(({ key }) => TOTAL_KEYS.includes(key));
+  const preferredSubjects = allPreferredSubjects.filter(
+    ({ key }) => !TOTAL_KEYS.includes(key) || key === firstTotalSubject?.key
+  );
+  // Use the lowercase total key only when no other total column exists
+  const totalFallback =
+    !firstTotalSubject && data.jeeMain.some((row) => hasValue(row.total))
+      ? [{ key: "total", label: "Total" }]
+      : [];
   const preferredKeys = new Set(preferredSubjects.map((subject) => subject.key));
   const extraSubjects = Array.from(
     new Set(
       data.jeeMain.flatMap((row) =>
         Object.keys(row).filter(
           (key) =>
-            !["date", "rank", "highest"].includes(key) &&
+            !["date", "rank", "highest", "total", ...TOTAL_KEYS].includes(key) &&
             !preferredKeys.has(key) &&
             data.jeeMain.some((item) => hasValue(item[key]))
         )
@@ -1132,7 +1143,7 @@ const buildJeeMainSection = (data) => {
     )
   ).map((key) => ({ key, label: key }));
 
-  const availableSubjects = [...preferredSubjects, ...extraSubjects];
+  const availableSubjects = [...preferredSubjects, ...totalFallback, ...extraSubjects];
 
   const columns = [
     { label: "Date" },
